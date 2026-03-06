@@ -3,21 +3,23 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from math import ceil
+
 from app.database import get_db
 from app.models.user import User
 from app.models.shop import Shop
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse, ProductListResponse
-from app.utils.dependencies import get_current_user, verify_shop_owner
+from app.api.auth import get_current_user
 
-router = APIRouter(prefix="/admin/products", tags=["Admin - Products"])
+# ✅ NO PREFIX HERE - will be set in main.py!
+router = APIRouter()
 
 
-@router.post("/{shop_id}/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def create_product(
     shop_id: int,
     product_data: ProductCreate,
-    shop: Shop = Depends(verify_shop_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -28,24 +30,32 @@ def create_product(
     - Price in AZN (e.g., 49.99)
     - Stock tracking (critical for inventory management)
     - Categories (e.g., "Geyim", "Elektronika", "Kosmetika")
-    - Multiple images
     
     This replaces Instagram posts with REAL inventory management!
     """
-    # Create product
+    # Verify shop ownership
+    shop = db.query(Shop).filter(
+        Shop.id == shop_id,
+        Shop.owner_id == current_user.id
+    ).first()
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop not found or access denied"
+        )
+    
+    # Create product with auto-generated slug
     new_product = Product(
+        shop_id=shop_id,
         name=product_data.name,
+        slug=product_data.name.lower().replace(" ", "-")[:50],  # Auto-generate slug
         description=product_data.description,
         price=product_data.price,
-        compare_at_price=product_data.compare_at_price,
-        category=product_data.category,
-        tags=product_data.tags or [],
         inventory_count=product_data.inventory_count,
-        track_inventory=product_data.track_inventory,
-        allow_backorder=product_data.allow_backorder,
-        low_stock_threshold=product_data.low_stock_threshold,
-        images=product_data.images or [],
-        shop_id=shop_id,
+        category=product_data.category,
+        track_inventory=True,
+        is_active=True,
     )
     
     db.add(new_product)
@@ -55,7 +65,7 @@ def create_product(
     return new_product
 
 
-@router.get("/{shop_id}/products", response_model=ProductListResponse)
+@router.get("", response_model=ProductListResponse)
 def list_products(
     shop_id: int,
     page: int = Query(1, ge=1, description="Page number"),
@@ -63,8 +73,7 @@ def list_products(
     search: Optional[str] = Query(None, description="Search by name or description"),
     category: Optional[str] = Query(None, description="Filter by category"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    is_low_stock: Optional[bool] = Query(None, description="Show only low stock items"),
-    shop: Shop = Depends(verify_shop_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -73,6 +82,18 @@ def list_products(
     Mobile-optimized pagination (20 items default).
     Supports search, category filter, and low stock alerts.
     """
+    # Verify shop ownership
+    shop = db.query(Shop).filter(
+        Shop.id == shop_id,
+        Shop.owner_id == current_user.id
+    ).first()
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop not found or access denied"
+        )
+    
     # Base query
     query = db.query(Product).filter(Product.shop_id == shop_id)
     
@@ -91,12 +112,6 @@ def list_products(
     
     if is_active is not None:
         query = query.filter(Product.is_active == is_active)
-    
-    if is_low_stock:
-        query = query.filter(
-            Product.track_inventory == True,
-            Product.inventory_count <= Product.low_stock_threshold
-        )
     
     # Get total count
     total = query.count()
@@ -117,11 +132,11 @@ def list_products(
     }
 
 
-@router.get("/{shop_id}/products/{product_id}", response_model=ProductResponse)
+@router.get("/{product_id}", response_model=ProductResponse)
 def get_product(
     shop_id: int,
     product_id: int,
-    shop: Shop = Depends(verify_shop_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -129,6 +144,18 @@ def get_product(
     
     Used in product edit page in admin dashboard.
     """
+    # Verify shop ownership
+    shop = db.query(Shop).filter(
+        Shop.id == shop_id,
+        Shop.owner_id == current_user.id
+    ).first()
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop not found"
+        )
+    
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.shop_id == shop_id
@@ -143,12 +170,12 @@ def get_product(
     return product
 
 
-@router.put("/{shop_id}/products/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}", response_model=ProductResponse)
 def update_product(
     shop_id: int,
     product_id: int,
     product_data: ProductUpdate,
-    shop: Shop = Depends(verify_shop_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -158,8 +185,19 @@ def update_product(
     - Price changes (e.g., sales, promotions)
     - Stock adjustments (after receiving new inventory)
     - Description improvements
-    - Image updates
     """
+    # Verify shop ownership
+    shop = db.query(Shop).filter(
+        Shop.id == shop_id,
+        Shop.owner_id == current_user.id
+    ).first()
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop not found"
+        )
+    
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.shop_id == shop_id
@@ -172,9 +210,7 @@ def update_product(
         )
     
     # Update fields
-    update_data = product_data.model_dump(exclude_unset=True)
-    
-    for field, value in update_data.items():
+    for field, value in product_data.dict(exclude_unset=True).items():
         setattr(product, field, value)
     
     db.commit()
@@ -183,11 +219,11 @@ def update_product(
     return product
 
 
-@router.delete("/{shop_id}/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(
     shop_id: int,
     product_id: int,
-    shop: Shop = Depends(verify_shop_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -196,6 +232,18 @@ def delete_product(
     Product is hidden from storefront but preserved in database
     (important for order history).
     """
+    # Verify shop ownership
+    shop = db.query(Shop).filter(
+        Shop.id == shop_id,
+        Shop.owner_id == current_user.id
+    ).first()
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop not found"
+        )
+    
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.shop_id == shop_id
@@ -207,58 +255,8 @@ def delete_product(
             detail="Product not found"
         )
     
+    # Soft delete
     product.is_active = False
     db.commit()
     
     return None
-
-
-@router.post("/{shop_id}/products/{product_id}/adjust-stock", response_model=ProductResponse)
-def adjust_stock(
-    shop_id: int,
-    product_id: int,
-    adjustment: int = Query(..., description="Stock adjustment (+10 to add, -5 to reduce)"),
-    shop: Shop = Depends(verify_shop_owner),
-    db: Session = Depends(get_db)
-):
-    """
-    Adjust product inventory count.
-    
-    Use cases:
-    - Received new stock: adjustment = +50
-    - Found damaged items: adjustment = -3
-    - Physical inventory count correction
-    
-    This is CRITICAL for Instagram sellers who never had stock tracking!
-    """
-    product = db.query(Product).filter(
-        Product.id == product_id,
-        Product.shop_id == shop_id
-    ).first()
-    
-    if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found"
-        )
-    
-    if not product.track_inventory:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This product does not track inventory"
-        )
-    
-    # Apply adjustment
-    new_count = product.inventory_count + adjustment
-    
-    if new_count < 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot reduce stock below 0. Current: {product.inventory_count}, Adjustment: {adjustment}"
-        )
-    
-    product.inventory_count = new_count
-    db.commit()
-    db.refresh(product)
-    
-    return product

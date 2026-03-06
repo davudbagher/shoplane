@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from typing import Optional
 from datetime import datetime
 
@@ -26,9 +26,8 @@ class CustomerCreate(CustomerBase):
 
 class CustomerResponse(CustomerBase):
     """Schema for customer response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     created_at: datetime
     updated_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True

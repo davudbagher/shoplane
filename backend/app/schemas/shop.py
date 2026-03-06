@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from app.models.shop import SubscriptionPlan
@@ -24,7 +24,8 @@ class ShopCreate(ShopBase):
         pattern="^[a-z0-9-]+$"
     )
     
-    @validator('subdomain')
+    @field_validator('subdomain')
+    @classmethod
     def validate_subdomain(cls, v):
         """Validate subdomain format."""
         if not re.match(r'^[a-z0-9-]+$', v):
@@ -53,6 +54,8 @@ class ShopUpdate(BaseModel):
 
 class ShopResponse(ShopBase):
     """Schema for shop response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     subdomain: str
     slug: str
@@ -66,13 +69,12 @@ class ShopResponse(ShopBase):
     is_active: bool
     owner_id: int
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class ShopPublicResponse(BaseModel):
     """Public shop info (for storefront, no sensitive data)."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     subdomain: str
@@ -84,6 +86,3 @@ class ShopPublicResponse(BaseModel):
     address: Optional[str]
     allow_cod: bool
     allow_online_payment: bool
-    
-    class Config:
-        from_attributes = True

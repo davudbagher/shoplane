@@ -7,43 +7,37 @@ from app.models.shop import Shop, SubscriptionPlan
 from app.schemas.shop import ShopCreate, ShopUpdate, ShopResponse
 from app.utils.dependencies import get_current_user, verify_shop_owner
 
-router = APIRouter(prefix="/admin/shops", tags=["Admin - Shops"])
+router = APIRouter()
 
 
-@router.post("", response_model=ShopResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ShopResponse, status_code=201)
 def create_shop(
     shop_data: ShopCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new shop with subdomain.
+    """Create a new shop for the authenticated user."""
     
-    This is the magic moment when an Azerbaijan entrepreneur gets their online presence:
-    - Input: cheechak → Output: cheechak.1link.az
-    
-    Subscription starts on BASE plan (49 AZN/month).
-    After creation, user can add products and start selling!
-    """
-    # Check if subdomain already taken
+    # Check if subdomain is already taken
     existing_shop = db.query(Shop).filter(Shop.subdomain == shop_data.subdomain).first()
     if existing_shop:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Subdomain '{shop_data.subdomain}' is already taken. Please choose another."
+            status_code=400,
+            detail=f"Subdomain '{shop_data.subdomain}' is already taken"
         )
     
-    # Create new shop
+    # Create shop with auto-generated slug (same as subdomain for now)
     new_shop = Shop(
         name=shop_data.name,
         subdomain=shop_data.subdomain,
+        slug=shop_data.subdomain,  # ← ADD THIS LINE! Auto-generate slug from subdomain
         description=shop_data.description,
-        phone=shop_data.phone,
-        email=shop_data.email,
-        address=shop_data.address,
         owner_id=current_user.id,
-        subscription_plan=SubscriptionPlan.BASE,  # Default: 49 AZN/month
-        subscription_active=True,  # Free trial or first month
+        subscription_plan=SubscriptionPlan.BASE,  # Default to BASE plan (free)
+        subscription_active=True,
+        is_active=True,
+        allow_cod=True,  # Enable cash on delivery by default (Azerbaijan standard)
+        allow_online_payment=False,  # Disabled until payment gateway configured
     )
     
     db.add(new_shop)

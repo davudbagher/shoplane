@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -13,6 +13,8 @@ class OrderItemCreate(BaseModel):
 
 class OrderItemResponse(BaseModel):
     """Schema for order item response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     product_id: int
     product_name: str
@@ -20,9 +22,6 @@ class OrderItemResponse(BaseModel):
     quantity: int
     unit_price: Decimal
     total_price: Decimal
-    
-    class Config:
-        from_attributes = True
 
 
 class OrderCreate(BaseModel):
@@ -46,7 +45,7 @@ class OrderCreate(BaseModel):
     )
     
     # Order items
-    items: List[OrderItemCreate] = Field(..., min_items=1, description="At least one product required")
+    items: List[OrderItemCreate] = Field(..., min_length=1, description="At least one product required")
     
     # Optional discount code (for future feature)
     discount_code: Optional[str] = None
@@ -60,6 +59,8 @@ class OrderUpdateStatus(BaseModel):
 
 class OrderResponse(BaseModel):
     """Schema for order response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     order_number: str
     status: OrderStatus
@@ -94,9 +95,6 @@ class OrderResponse(BaseModel):
     confirmed_at: Optional[datetime]
     shipped_at: Optional[datetime]
     delivered_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True
 
 
 class OrderListResponse(BaseModel):

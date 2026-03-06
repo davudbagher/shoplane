@@ -1,10 +1,11 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """Application configuration settings."""
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
     
     # Database
     DATABASE_URL: str
@@ -43,10 +44,6 @@ class Settings(BaseSettings):
     def allowed_hosts_list(self) -> List[str]:
         """Parse allowed hosts into list."""
         return [host.strip() for host in self.ALLOWED_HOSTS.split(",")]
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 @lru_cache()

@@ -1,0 +1,10 @@
+{
+    "include": [
+        "app"
+    ],
+    "extraPaths": [
+        "."
+    ],
+    "pythonVersion": "3.11",
+    "pythonPlatform": "Linux"
+}

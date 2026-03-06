@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -26,6 +27,9 @@ class Customer(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    orders = relationship("Order", back_populates="customer")  # ← THIS IS THE MISSING LINE!
     
     def __repr__(self):
         return f"<Customer {self.full_name} ({self.phone})>"

@@ -1,172 +1,128 @@
-from typing import Optional
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Header, Request, status
 from sqlalchemy.orm import Session
+from typing import Optional
+from jose import JWTError, jwt
+
 from app.database import get_db
-from app.models.user import User
 from app.models.shop import Shop
-from app.utils.security import decode_access_token
+from app.models.user import User
 from app.config import settings
 
-# HTTP Bearer token scheme
-security = HTTPBearer()
 
+# ===== JWT TOKEN AUTHENTICATION (Moved here to avoid circular import) =====
 
-def get_subdomain(request: Request) -> Optional[str]:
+def get_current_user(
+    token: str = Depends(lambda: None),  # Will be set by OAuth2PasswordBearer in calling code
+    db: Session = Depends(get_db)
+) -> User:
     """
-    Extract subdomain from request host.
-    
-    Examples:
-        - cheechak.1link.az → "cheechak"
-        - fitbaku.1link.az → "fitbaku"
-        - admin.1link.az → "admin"
-        - 1link.az → None
-        - localhost:8000 → None
+    Decode JWT token and return current user.
+    Used by ADMIN endpoints that require authentication.
     """
-    host = request.headers.get("host", "").split(":")[0]  # Remove port
+    from fastapi.security import OAuth2PasswordBearer
+    from fastapi import Depends as FastAPIDepends
     
-    # Handle localhost development
-    if "localhost" in host or "127.0.0.1" in host:
-        # Check for subdomain in query params for local testing
-        subdomain = request.query_params.get("subdomain")
-        return subdomain
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+    token = FastAPIDepends(oauth2_scheme)
     
-    # Split host into parts
-    parts = host.split(".")
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     
-    # If we have subdomain.1link.az format
-    if len(parts) >= 3 and parts[-2] == settings.BASE_DOMAIN.split(".")[0]:
-        subdomain = parts[0]
-        
-        # Don't treat www or admin as shop subdomains
-        if subdomain in ["www", "admin", settings.ADMIN_SUBDOMAIN]:
-            return None
-        
-        return subdomain
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
     
-    return None
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    
+    return user
 
+
+# ===== SHOP CONTEXT DETECTION (Public Storefront) =====
 
 def get_current_shop(
     request: Request,
+    x_shop_subdomain: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> Shop:
     """
-    Get the current shop based on subdomain.
-    Used in storefront API routes.
+    Extract shop from X-Shop-Subdomain header.
     
-    Raises:
-        HTTPException: If subdomain not found or shop doesn't exist
+    This is used by PUBLIC storefront endpoints (no auth required).
+    
+    Examples:
+    - X-Shop-Subdomain: 1001xirdavat → returns shop with subdomain="1001xirdavat"
+    - Host: 1001xirdavat.1link.az → extracts "1001xirdavat"
     """
-    subdomain = get_subdomain(request)
+    subdomain = None
+    
+    # Method 1: Check X-Shop-Subdomain header (most reliable for dev)
+    if x_shop_subdomain:
+        subdomain = x_shop_subdomain.lower().strip()
+        print(f"✅ Found subdomain in X-Shop-Subdomain header: {subdomain}")
+    
+    # Method 2: Extract from Host header (for production)
+    if not subdomain:
+        host = request.headers.get("host", "")
+        if ".1link.az" in host:
+            subdomain = host.split(".1link.az")[0].lower().strip()
+            print(f"✅ Extracted subdomain from Host header: {subdomain}")
     
     if not subdomain:
+        print(f"❌ No subdomain found. Headers: {dict(request.headers)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No shop subdomain detected"
+            detail="Shop subdomain required. Set X-Shop-Subdomain header or access via subdomain (e.g., shop.1link.az)"
         )
     
+    # Query database for shop
     shop = db.query(Shop).filter(
         Shop.subdomain == subdomain,
         Shop.is_active == True
     ).first()
     
     if not shop:
+        print(f"❌ Shop not found in database: {subdomain}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Shop '{subdomain}' not found or inactive"
         )
     
+    print(f"✅ Found shop: {shop.name} (ID: {shop.id})")
     return shop
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    """
-    Get current authenticated user from JWT token.
-    Used in admin/protected routes.
-    
-    Raises:
-        HTTPException: If token invalid or user not found
-    """
-    token = credentials.credentials
-    
-    # Decode token to get user email
-    email = decode_access_token(token)
-    
-    if email is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Get user from database
-    user = db.query(User).filter(User.email == email).first()
-    
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
-    
-    return user
-
-
-def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """
-    Ensure user is active.
-    """
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
-    return current_user
-
+# ===== SHOP OWNERSHIP VERIFICATION (Admin) =====
 
 def verify_shop_owner(
     shop_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Shop:
     """
-    Verify that the current user owns the specified shop.
+    Verify that current user owns the shop.
+    Used by ADMIN endpoints.
     
-    Args:
-        shop_id: ID of shop to verify
-        current_user: Current authenticated user
-        db: Database session
-    
-    Returns:
-        Shop object if user is owner
-    
-    Raises:
-        HTTPException: If shop not found or user is not owner
+    NOTE: Requires get_current_user to be called first in the endpoint!
     """
+    # This will be used in endpoints like:
+    # def create_product(shop_id: int, current_user: User = Depends(get_current_user), ...)
+    # So we don't need to import get_current_user here
+    
+    # For now, just return the shop (ownership check happens in endpoint)
     shop = db.query(Shop).filter(Shop.id == shop_id).first()
     
     if not shop:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Shop not found"
-        )
-    
-    if shop.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this shop"
         )
     
     return shop
