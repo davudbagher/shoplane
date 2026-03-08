@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../components/AdminLayout";
-import { shopsApi } from "../../../shared/api";
+import { adminApi } from "../../../shared/api";
 import { Button } from "../../../shared/components/Button";
 
 export const DashboardPage = () => {
@@ -15,7 +15,7 @@ export const DashboardPage = () => {
 
   const loadShops = async () => {
     try {
-      const data = await shopsApi.getMyShops();
+      const data = await adminApi.getShops();
       setShops(data);
     } catch (err) {
       console.error("Failed to load shops:", err);

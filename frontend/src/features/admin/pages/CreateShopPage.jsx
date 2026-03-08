@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../components/AdminLayout';
-import { shopsApi } from '../../../shared/api';
+import { adminApi } from '../../../shared/api';
 import { Button } from '../../../shared/components/Button';
 import { Input } from '../../../shared/components/Input';
 
@@ -68,7 +68,7 @@ export const CreateShopPage = () => {
     setLoading(true);
     
     try {
-      const shop = await shopsApi.createShop(formData);
+      const shop = await adminApi.createShop(formData);
       
       // Success! Redirect to dashboard or shop management
       navigate('/admin/dashboard');

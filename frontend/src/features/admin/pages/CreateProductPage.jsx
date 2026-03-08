@@ -145,15 +145,15 @@ export const CreateProductPage = () => {
 
               {/* Stock Quantity */}
               <Input
-  label="Stok Miqdarı"
-  type="number"
-  name="inventory_count"  // ✅
-  placeholder="100"
-  value={formData.inventory_count}  // ✅
-  onChange={handleChange}
-  error={errors.inventory_count}  // ✅
-  required
-/>
+                label="Stok Miqdarı"
+                type="number"
+                name="inventory_count" // ✅
+                placeholder="100"
+                value={formData.inventory_count} // ✅
+                onChange={handleChange}
+                error={errors.inventory_count} // ✅
+                required
+              />
 
               {/* Category */}
               <Input

@@ -11,10 +11,20 @@ export const adminApi = {
   // ===== SHOPS API =====
   
   // Get all shops for current user
-  getShops: async () => {
-    const response = await adminClient.get('/admin/shops');
+  // Get all shops for current user
+getShops: async () => {
+  const response = await adminClient.get('/admin/shops');
+  console.log('🔍 getShops response:', response.data);
+  
+  // Defensive: Handle array or wrapped object
+  if (Array.isArray(response.data)) {
     return response.data;
-  },
+  } else if (response.data && response.data.shops) {
+    return response.data.shops;
+  }
+  
+  return []; // Fallback to empty array
+},
   
   // Get single shop by ID
   getShop: async (shopId) => {
@@ -43,10 +53,22 @@ export const adminApi = {
   // ===== PRODUCTS API =====
   
   // Get all products for a shop
-  getProducts: async (shopId) => {
-    const response = await adminClient.get(`/admin/shops/${shopId}/products`);
+  // Get products for a shop
+getProducts: async (shopId) => {
+  const response = await adminClient.get(`/admin/shops/${shopId}/products`);
+  console.log('🔍 getProducts response:', response.data);
+  
+  // Defensive: Handle array or wrapped object
+  if (Array.isArray(response.data)) {
     return response.data;
-  },
+  } else if (response.data && response.data.products) {
+    return response.data.products;
+  } else if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return []; // Fallback to empty array
+},
   
   // Get single product
   getProduct: async (shopId, productId) => {
@@ -75,10 +97,22 @@ export const adminApi = {
   // ===== ORDERS API =====
   
   // Get all orders for a shop
-  getOrders: async (shopId, params = {}) => {
-    const response = await adminClient.get(`/admin/shops/${shopId}/orders`, { params });
+  // Get orders for a shop
+getOrders: async (shopId) => {
+  const response = await adminClient.get(`/admin/shops/${shopId}/orders`);
+  console.log('🔍 getOrders response:', response.data);
+  
+  // Defensive: Handle array or wrapped object
+  if (Array.isArray(response.data)) {
     return response.data;
-  },
+  } else if (response.data && response.data.orders) {
+    return response.data.orders;
+  } else if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return []; // Fallback to empty array
+},
   
   // Get single order
   getOrder: async (shopId, orderId) => {
