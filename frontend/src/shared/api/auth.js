@@ -1,5 +1,4 @@
-import apiClient from './client';
-
+import { apiClient } from './client';
 /**
  * Authentication API
  * Connects to FastAPI /auth endpoints

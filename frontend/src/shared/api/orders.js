@@ -1,5 +1,4 @@
-import apiClient from './client';
-
+import { apiClient } from './client';
 /**
  * Orders API (Admin)
  * Connects to FastAPI /admin/orders endpoints

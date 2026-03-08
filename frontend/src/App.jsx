@@ -5,6 +5,9 @@ import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
 import { ShopManagePage } from "./features/admin/pages/ShopManagePage";
 import { CreateProductPage } from "./features/admin/pages/CreateProductPage";
 import { ShopHomePage } from "./features/storefront/pages/ShopHomePage";
+import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage"; //
+import { CartPage } from "./features/storefront/pages/CartPage"; //
+import { CheckoutPage } from './features/storefront/pages/CheckoutPage';
 import { ProtectedRoute } from "./shared/components";
 
 function App() {
@@ -17,13 +20,10 @@ function App() {
       {/* Storefront Routes */}
       {/* ===== STOREFRONT ROUTES (Public) ===== */}
       <Route path="/" element={<ShopHomePage />} />
-      <Route
-        path="/products/:productId"
-        element={<div>Product Detail (Coming Soon)</div>}
-      />
-      <Route path="/cart" element={<div>Cart (Coming Soon)</div>} />
-      <Route path="/checkout" element={<div>Checkout (Coming Soon)</div>} />
-
+      <Route path="/products/:productId" element={<ProductDetailPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} /> 
+      
       {/* Protected Admin Routes */}
       <Route
         path="/admin/dashboard"

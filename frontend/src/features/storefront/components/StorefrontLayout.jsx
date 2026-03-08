@@ -9,6 +9,13 @@ export const StorefrontLayout = ({ children }) => {
   useEffect(() => {
     loadShop();
     updateCartCount();
+    
+    // Listen for cart updates
+    window.addEventListener('cartUpdated', updateCartCount);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
   }, []);
 
   const loadShop = async () => {
@@ -21,9 +28,14 @@ export const StorefrontLayout = ({ children }) => {
   };
 
   const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    setCartCount(count);
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(count);
+    } catch (err) {
+      console.error('Failed to parse cart:', err);
+      setCartCount(0);
+    }
   };
 
   return (
@@ -142,11 +154,9 @@ export const StorefrontLayout = ({ children }) => {
                 </span>
               )}
               {shop?.allow_online_payment && (
-                <>
-                  <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
-                    💳 Kart
-                  </span>
-                </>
+                <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
+                  💳 Kart
+                </span>
               )}
             </div>
           </div>

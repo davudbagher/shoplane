@@ -1,21 +1,21 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { AdminLayout } from '../components/AdminLayout';
-import { productsApi } from '../../../shared/api';
-import { Button } from '../../../shared/components/Button';
-import { Input } from '../../../shared/components/Input';
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { AdminLayout } from "../components/AdminLayout";
+import { adminApi } from "../../../shared/api";
+import { Button } from "../../../shared/components/Button";
+import { Input } from "../../../shared/components/Input";
 
 export const CreateProductPage = () => {
   const { shopId } = useParams();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    stock_quantity: '',
-    category: '',
-    image_url: '',
+    name: "",
+    description: "",
+    price: "",
+    inventory_count: "",
+    category: "",
+    image_url: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -24,20 +24,20 @@ export const CreateProductPage = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name) newErrors.name = 'Məhsul adı tələb olunur';
-    if (!formData.price) newErrors.price = 'Qiymət tələb olunur';
+    if (!formData.name) newErrors.name = "Məhsul adı tələb olunur";
+    if (!formData.price) newErrors.price = "Qiymət tələb olunur";
     if (formData.price && parseFloat(formData.price) <= 0) {
-      newErrors.price = 'Qiymət 0-dan böyük olmalıdır';
+      newErrors.price = "Qiymət 0-dan böyük olmalıdır";
     }
-    if (!formData.stock_quantity) newErrors.stock_quantity = 'Stok miqdarı tələb olunur';
-
+    if (!formData.inventory_count)
+      newErrors.inventory_count = "Stok miqdarı tələb olunur";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -53,13 +53,14 @@ export const CreateProductPage = () => {
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
-        stock_quantity: parseInt(formData.stock_quantity),
+        inventory_count: parseInt(formData.inventory_count), // ✅
       };
 
-      await productsApi.createProduct(shopId, productData);
+      await adminApi.createProduct(shopId, productData);
       navigate(`/admin/shops/${shopId}`);
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || 'Məhsul əlavə edilərkən xəta baş verdi';
+      const errorMessage =
+        err.response?.data?.detail || "Məhsul əlavə edilərkən xəta baş verdi";
       setErrors({ submit: errorMessage });
     } finally {
       setLoading(false);
@@ -130,27 +131,29 @@ export const CreateProductPage = () => {
                     value={formData.price}
                     onChange={handleChange}
                     placeholder="29.99"
-                    className={`input-field pr-12 ${errors.price ? 'input-error' : ''}`}
+                    className={`input-field pr-12 ${errors.price ? "input-error" : ""}`}
                     required
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
                     ₼
                   </span>
                 </div>
-                {errors.price && <p className="error-message">{errors.price}</p>}
+                {errors.price && (
+                  <p className="error-message">{errors.price}</p>
+                )}
               </div>
 
               {/* Stock Quantity */}
               <Input
-                label="Stok Miqdarı"
-                type="number"
-                name="stock_quantity"
-                placeholder="100"
-                value={formData.stock_quantity}
-                onChange={handleChange}
-                error={errors.stock_quantity}
-                required
-              />
+  label="Stok Miqdarı"
+  type="number"
+  name="inventory_count"  // ✅
+  placeholder="100"
+  value={formData.inventory_count}  // ✅
+  onChange={handleChange}
+  error={errors.inventory_count}  // ✅
+  required
+/>
 
               {/* Category */}
               <Input
@@ -174,8 +177,13 @@ export const CreateProductPage = () => {
 
               {/* Buttons */}
               <div className="flex space-x-4">
-                <Button type="submit" variant="primary" loading={loading} className="flex-1">
-                  {loading ? 'Əlavə edilir...' : 'Məhsul Əlavə Et'}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={loading}
+                  className="flex-1"
+                >
+                  {loading ? "Əlavə edilir..." : "Məhsul Əlavə Et"}
                 </Button>
                 <Button
                   type="button"

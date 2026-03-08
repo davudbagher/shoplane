@@ -100,19 +100,24 @@ export const ShopHomePage = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((product) => {
-              // Parse images
+              // SAFE image parsing with error handling
               let productImages = [];
               try {
-                if (typeof product.images === 'string') {
-                  productImages = JSON.parse(product.images);
-                } else if (Array.isArray(product.images)) {
-                  productImages = product.images;
+                if (product.images) {
+                  if (typeof product.images === 'string' && product.images.trim()) {
+                    productImages = JSON.parse(product.images);
+                  } else if (Array.isArray(product.images)) {
+                    productImages = product.images;
+                  }
                 }
               } catch (e) {
+                console.warn(`Failed to parse images for product ${product.id}:`, e);
                 productImages = [];
               }
 
-              const firstImage = productImages.length > 0 ? productImages[0] : null;
+              const firstImage = Array.isArray(productImages) && productImages.length > 0
+                ? productImages[0]
+                : null;
 
               return (
                 <div
