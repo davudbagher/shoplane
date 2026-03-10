@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AdminLayout } from '../components/AdminLayout';
+import { AdminLayout } from '../../../shared/components';
 import { adminApi } from '../../../shared/api';
 import { Button } from '../../../shared/components/Button';
 

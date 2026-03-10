@@ -243,10 +243,9 @@ def create_order(
     # Generate unique order number
     order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{db.query(Order).count() + 1:04d}"
     
-    # Find or create customer
+    # Find or create customer (lookup by phone only - no shop_id on customers table)
     customer = db.query(Customer).filter(
-        Customer.phone == order_data.customer_phone,
-        Customer.shop_id == shop.id
+        Customer.phone == order_data.customer_phone
     ).first()
     
     if not customer:
@@ -259,7 +258,6 @@ def create_order(
             address_line=order_data.shipping_address,
             postal_code=order_data.shipping_postal_code,
             delivery_notes=order_data.delivery_notes,
-            shop_id=shop.id
         )
         db.add(customer)
         db.flush()  # Get customer ID

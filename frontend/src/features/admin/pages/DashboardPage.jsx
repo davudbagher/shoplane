@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdminLayout } from "../components/AdminLayout";
 import { adminApi } from "../../../shared/api";
 import { Button } from "../../../shared/components/Button";
+import { AdminLayout } from '../../../shared/components';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();

@@ -5,26 +5,32 @@ import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
 import { ShopManagePage } from "./features/admin/pages/ShopManagePage";
 import { CreateProductPage } from "./features/admin/pages/CreateProductPage";
 import { ShopHomePage } from "./features/storefront/pages/ShopHomePage";
-import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage"; //
-import { CartPage } from "./features/storefront/pages/CartPage"; //
+import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage";
+import { CartPage } from "./features/storefront/pages/CartPage";
 import { CheckoutPage } from './features/storefront/pages/CheckoutPage';
+import { OrderConfirmationPage } from './features/storefront/pages/OrderConfirmationPage';
 import { ProtectedRoute } from "./shared/components";
 
 function App() {
+  // Detect if we're on admin subdomain or path
+  const isAdminRoute = window.location.pathname.startsWith('/admin') || 
+                       window.location.pathname.startsWith('/login') || 
+                       window.location.pathname.startsWith('/register');
+
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* ===== AUTH ROUTES (Public) ===== */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Storefront Routes */}
-      {/* ===== STOREFRONT ROUTES (Public) ===== */}
+      {/* ===== STOREFRONT ROUTES (Public - Customer Facing) ===== */}
       <Route path="/" element={<ShopHomePage />} />
       <Route path="/products/:productId" element={<ProductDetailPage />} />
       <Route path="/cart" element={<CartPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} /> 
-      
-      {/* Protected Admin Routes */}
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/orders/:orderNumber" element={<OrderConfirmationPage />} />
+
+      {/* ===== ADMIN ROUTES (Protected - Shop Owner) ===== */}
       <Route
         path="/admin/dashboard"
         element={
@@ -51,6 +57,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/shops/:shopId/products/new"
         element={
@@ -60,11 +67,16 @@ function App() {
         }
       />
 
-      {/* Redirect root to dashboard */}
-      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+      {/* ===== FALLBACK ROUTES ===== */}
+      {/* Catch unknown routes - redirect based on context */}
+      <Route 
+        path="*" 
+        element={
+          isAdminRoute 
+            ? <Navigate to="/admin/dashboard" replace /> 
+            : <Navigate to="/" replace />
+        } 
+      />
     </Routes>
   );
 }

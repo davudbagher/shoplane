@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, Header, Request, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional
 from jose import JWTError, jwt
@@ -9,22 +10,19 @@ from app.models.user import User
 from app.config import settings
 
 
-# ===== JWT TOKEN AUTHENTICATION (Moved here to avoid circular import) =====
+# ===== JWT TOKEN AUTHENTICATION =====
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
 
 def get_current_user(
-    token: str = Depends(lambda: None),  # Will be set by OAuth2PasswordBearer in calling code
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Decode JWT token and return current user.
     Used by ADMIN endpoints that require authentication.
     """
-    from fastapi.security import OAuth2PasswordBearer
-    from fastapi import Depends as FastAPIDepends
-    
-    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-    token = FastAPIDepends(oauth2_scheme)
-    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
