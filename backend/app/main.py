@@ -3,7 +3,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.api import auth, admin_shops, admin_products, admin_orders, storefront
+from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload
+from fastapi.staticfiles import StaticFiles
+import os
 
 
 # Create database tables on startup
@@ -65,6 +67,11 @@ app.include_router(
 )
 app.include_router(admin_orders.router)            # Order management (admin)
 app.include_router(storefront.router)              # Storefront (public)
+app.include_router(upload.router, prefix="/admin/upload", tags=["Uploads"])
+
+# Static file serving for images
+os.makedirs("uploads/images", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # Health Check Endpoint

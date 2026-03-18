@@ -19,13 +19,19 @@ const getShopSubdomain = () => {
   // Development: localhost or 192.168.x.x
   if (hostname === 'localhost' || hostname.startsWith('192.168') || hostname.startsWith('127.0.0.1')) {
     // Check localStorage for dev subdomain
-    const devSubdomain = localStorage.getItem('dev_shop_subdomain');
+    let devSubdomain = localStorage.getItem('dev_shop_subdomain');
+    
+    // Auto-fix old hardcoded default to point to the user's actual shop
+    if (devSubdomain === '1001xirdavat') {
+      devSubdomain = 'cheechak';
+      localStorage.setItem('dev_shop_subdomain', 'cheechak');
+    }
     
     if (!devSubdomain) {
       // Auto-set default for development
-      console.warn('⚠️ No dev_shop_subdomain in localStorage, setting default: 1001xirdavat');
-      localStorage.setItem('dev_shop_subdomain', '1001xirdavat');
-      return '1001xirdavat';
+      console.warn('⚠️ No dev_shop_subdomain in localStorage, setting default: cheechak');
+      localStorage.setItem('dev_shop_subdomain', 'cheechak');
+      return 'cheechak';
     }
     
     console.log('🏪 Using dev subdomain:', devSubdomain);

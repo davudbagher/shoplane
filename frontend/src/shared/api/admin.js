@@ -8,6 +8,16 @@ import { apiClient } from './client';
 const adminClient = apiClient; // Uses JWT auth token automatically
 
 export const adminApi = {
+  // ===== UPLOAD API =====
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await adminClient.post('/admin/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+  
   // ===== SHOPS API =====
   
   // Get all shops for current user

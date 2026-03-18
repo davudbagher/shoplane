@@ -4,6 +4,7 @@ import { DashboardPage } from "./features/admin/pages/DashboardPage";
 import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
 import { ShopManagePage } from "./features/admin/pages/ShopManagePage";
 import { CreateProductPage } from "./features/admin/pages/CreateProductPage";
+import { EditProductPage } from "./features/admin/pages/EditProductPage";
 import { ShopHomePage } from "./features/storefront/pages/ShopHomePage";
 import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage";
 import { CartPage } from "./features/storefront/pages/CartPage";
@@ -63,6 +64,15 @@ function App() {
         element={
           <ProtectedRoute>
             <CreateProductPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shops/:shopId/products/:productId/edit"
+        element={
+          <ProtectedRoute>
+            <EditProductPage />
           </ProtectedRoute>
         }
       />

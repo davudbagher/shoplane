@@ -54,6 +54,7 @@ def create_product(
         price=product_data.price,
         inventory_count=product_data.inventory_count,
         category=product_data.category,
+        images=product_data.images or [],
         track_inventory=True,
         is_active=True,
     )
@@ -255,8 +256,8 @@ def delete_product(
             detail="Product not found"
         )
     
-    # Soft delete
-    product.is_active = False
+    # Hard delete - permanently remove from database
+    db.delete(product)
     db.commit()
     
     return None

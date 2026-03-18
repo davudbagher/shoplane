@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from '../../../shared/components';
 import { adminApi } from "../../../shared/api";
 import { Button } from "../../../shared/components/Button";
 import { Input } from "../../../shared/components/Input";
 
-export const CreateProductPage = () => {
-  const { shopId } = useParams();
+export const EditProductPage = () => {
+  const { shopId, productId } = useParams();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -19,23 +19,48 @@ export const CreateProductPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    loadProduct();
+  }, [productId]);
+
+  const loadProduct = async () => {
+    try {
+      setPageLoading(true);
+      const product = await adminApi.getProduct(shopId, productId);
+      // images is a List[str] on the backend; grab first one for the image_url field
+      const firstImage = Array.isArray(product.images) && product.images.length > 0
+        ? product.images[0]
+        : "";
+      setFormData({
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price || "",
+        inventory_count: product.inventory_count ?? "",
+        category: product.category || "",
+        image_url: firstImage,
+      });
+    } catch (err) {
+      console.error("❌ Failed to load product:", err);
+      setErrors({ submit: "Məhsul yüklənərkən xəta baş verdi" });
+    } finally {
+      setPageLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.name) newErrors.name = "Məhsul adı tələb olunur";
     if (!formData.price) newErrors.price = "Qiymət tələb olunur";
-    if (formData.price && parseFloat(formData.price) <= 0) {
+    if (formData.price && parseFloat(formData.price) <= 0)
       newErrors.price = "Qiymət 0-dan böyük olmalıdır";
-    }
     if (!formData.inventory_count)
       newErrors.inventory_count = "Stok miqdarı tələb olunur";
     setErrors(newErrors);
@@ -44,9 +69,7 @@ export const CreateProductPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     setLoading(true);
 
     try {
@@ -59,16 +82,29 @@ export const CreateProductPage = () => {
         images: image_url ? [image_url] : [],
       };
 
-      await adminApi.createProduct(shopId, productData);
+      await adminApi.updateProduct(shopId, productId, productData);
       navigate(`/admin/shops/${shopId}`);
     } catch (err) {
       const errorMessage =
-        err.response?.data?.detail || "Məhsul əlavə edilərkən xəta baş verdi";
+        err.response?.data?.detail || "Məhsul yenilənərkən xəta baş verdi";
       setErrors({ submit: errorMessage });
     } finally {
       setLoading(false);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="loading-spinner h-12 w-12 mx-auto mb-4"></div>
+            <p className="text-gray-600">Yüklənir...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -76,9 +112,9 @@ export const CreateProductPage = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Yeni Məhsul Əlavə Et
+            Məhsulu Redaktə Et
           </h1>
-          <p className="text-gray-600">Məhsul məlumatlarını daxil edin</p>
+          <p className="text-gray-600">Məhsul məlumatlarını yeniləyin</p>
         </div>
 
         {/* Form Card */}
@@ -150,11 +186,11 @@ export const CreateProductPage = () => {
               <Input
                 label="Stok Miqdarı"
                 type="number"
-                name="inventory_count" // ✅
+                name="inventory_count"
                 placeholder="100"
-                value={formData.inventory_count} // ✅
+                value={formData.inventory_count}
                 onChange={handleChange}
-                error={errors.inventory_count} // ✅
+                error={errors.inventory_count}
                 required
               />
 
@@ -170,14 +206,14 @@ export const CreateProductPage = () => {
 
               {/* Image Upload */}
               <div className="mb-4">
-                <label className="label">Məhsul Şəkli (İstəyə bağlı)</label>
+                <label className="label">Məhsul Şəkli</label>
                 <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:bg-gray-50 transition-colors">
                   {formData.image_url ? (
                     <div className="relative">
                       <img src={formData.image_url} alt="Preview" className="h-32 object-contain" />
-                      <button 
+                      <button
                         type="button"
-                        onClick={() => setFormData(p => ({...p, image_url: ''}))}
+                        onClick={() => setFormData(p => ({ ...p, image_url: '' }))}
                         className="absolute -top-2 -right-2 bg-danger-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
                       >
                         ✕
@@ -193,10 +229,10 @@ export const CreateProductPage = () => {
                           <span>Şəkil seçin</span>
                           <input type="file" className="sr-only" accept="image/*" onChange={async (e) => {
                             const file = e.target.files[0];
-                            if(!file) return;
+                            if (!file) return;
                             try {
                               const res = await adminApi.uploadImage(file);
-                              setFormData(p => ({...p, image_url: res.url}));
+                              setFormData(p => ({ ...p, image_url: res.url }));
                             } catch (err) {
                               alert("Şəkil yüklənərkən xəta baş verdi");
                             }
@@ -217,7 +253,7 @@ export const CreateProductPage = () => {
                   loading={loading}
                   className="flex-1"
                 >
-                  {loading ? "Əlavə edilir..." : "Məhsul Əlavə Et"}
+                  {loading ? "Yenilənir..." : "Dəyişiklikləri Saxla"}
                 </Button>
                 <Button
                   type="button"
@@ -230,16 +266,6 @@ export const CreateProductPage = () => {
               </div>
             </form>
           </div>
-        </div>
-
-        {/* Info */}
-        <div className="mt-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
-          <h4 className="font-semibold text-primary-900 mb-2">💡 Məsləhət</h4>
-          <ul className="text-sm text-primary-800 space-y-1">
-            <li>• Qiyməti AZN (Azərbaycan Manatı) ilə daxil edin</li>
-            <li>• Yaxşı keyfiyyətli məhsul şəkli istifadə edin</li>
-            <li>• Təsvirdə məhsulun xüsusiyyətlərini qeyd edin</li>
-          </ul>
         </div>
       </div>
     </AdminLayout>
