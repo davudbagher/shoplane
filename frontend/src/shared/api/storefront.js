@@ -145,6 +145,15 @@ export const storefrontApi = {
     });
     return response.data;
   },
+
+  /**
+   * Validate coupon code
+   * POST /storefront/validate-coupon
+   */
+  validateCoupon: async (requestData) => {
+    const response = await storefrontClient.post('/storefront/validate-coupon', requestData);
+    return response.data;
+  },
 };
 
 /**

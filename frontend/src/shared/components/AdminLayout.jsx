@@ -67,6 +67,12 @@ export const AdminLayout = ({ children }) => {
           active: location.pathname.includes('/orders')
         },
         { 
+          icon: '🎟️', 
+          label: 'Kuponlar', 
+          path: activePath('/coupons'),
+          active: location.pathname.includes('/coupons')
+        },
+        { 
           icon: '📈', 
           label: 'Analitika', 
           path: '/admin/analytics',

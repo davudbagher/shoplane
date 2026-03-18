@@ -57,6 +57,7 @@ class Shop(Base):
     owner = relationship("User", back_populates="shops")
     products = relationship("Product", back_populates="shop", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="shop", cascade="all, delete-orphan")
+    coupons = relationship("Coupon", back_populates="shop", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Shop {self.subdomain}.1link.az>"

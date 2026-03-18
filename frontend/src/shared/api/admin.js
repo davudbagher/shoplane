@@ -106,33 +106,47 @@ getProducts: async (shopId) => {
   
   // ===== ORDERS API =====
   
-  // Get all orders for a shop
-  // Get orders for a shop
-getOrders: async (shopId) => {
-  const response = await adminClient.get(`/admin/shops/${shopId}/orders`);
-  console.log('🔍 getOrders response:', response.data);
-  
-  // Defensive: Handle array or wrapped object
-  if (Array.isArray(response.data)) {
-    return response.data;
-  } else if (response.data && response.data.orders) {
-    return response.data.orders;
-  } else if (response.data && response.data.data) {
-    return response.data.data;
-  }
-  
-  return []; // Fallback to empty array
-},
-  
-  // Get single order
-  getOrder: async (shopId, orderId) => {
-    const response = await adminClient.get(`/admin/shops/${shopId}/orders/${orderId}`);
+  getOrders: async (shopId, params = {}) => {
+    const response = await adminClient.get(`/admin/orders/${shopId}/orders`, { params });
     return response.data;
   },
   
-  // Update order status
+  getOrder: async (shopId, orderId) => {
+    const response = await adminClient.get(`/admin/orders/${shopId}/orders/${orderId}`);
+    return response.data;
+  },
+  
   updateOrderStatus: async (shopId, orderId, statusData) => {
-    const response = await adminClient.put(`/admin/shops/${shopId}/orders/${orderId}/status`, statusData);
+    const response = await adminClient.put(`/admin/orders/${shopId}/orders/${orderId}/status`, statusData);
+    return response.data;
+  },
+
+  cancelOrder: async (shopId, orderId, reason) => {
+    const response = await adminClient.post(`/admin/orders/${shopId}/orders/${orderId}/cancel`, null, {
+      params: reason ? { reason } : undefined
+    });
+    return response.data;
+  },
+
+  getStats: async (shopId, days = 30) => {
+    const response = await adminClient.get(`/admin/orders/${shopId}/stats`, { params: { days } });
+    return response.data;
+  },
+
+  // ===== COUPONS API =====
+
+  getCoupons: async (shopId) => {
+    const response = await adminClient.get(`/admin/shops/${shopId}/coupons`);
+    return response.data;
+  },
+
+  createCoupon: async (shopId, couponData) => {
+    const response = await adminClient.post(`/admin/shops/${shopId}/coupons`, couponData);
+    return response.data;
+  },
+
+  deleteCoupon: async (shopId, couponId) => {
+    const response = await adminClient.delete(`/admin/shops/${shopId}/coupons/${couponId}`);
     return response.data;
   },
 };

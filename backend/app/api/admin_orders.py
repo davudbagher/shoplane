@@ -12,6 +12,7 @@ from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.product import Product
 from app.schemas.order import OrderUpdateStatus, OrderResponse, OrderListResponse, OrderStatsResponse
 from app.utils.dependencies import get_current_user, verify_shop_owner
+from fastapi import BackgroundTasks
 
 router = APIRouter(prefix="/admin/orders", tags=["Admin - Orders"])
 
@@ -108,6 +109,7 @@ def update_order_status(
     shop_id: int,
     order_id: int,
     status_update: OrderUpdateStatus,
+    background_tasks: BackgroundTasks,
     shop: Shop = Depends(verify_shop_owner),
     db: Session = Depends(get_db)
 ):

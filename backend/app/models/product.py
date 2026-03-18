@@ -29,6 +29,9 @@ class Product(Base):
     # Media
     images = Column(JSON, default=list)  # List of image URLs
     
+    # Variants (New)
+    variants = Column(JSON, default=list)  # List of {color, size, stock, sold} dicts
+    
     # Organization
     category = Column(String, nullable=True, index=True)
     tags = Column(JSON, default=list)  # List of tags
@@ -40,6 +43,7 @@ class Product(Base):
     # Status
     is_active = Column(Boolean, default=True, index=True)
     is_featured = Column(Boolean, default=False)
+    is_new_arrival = Column(Boolean, default=False)
     
     # Multi-tenant isolation
     shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)

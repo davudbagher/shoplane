@@ -3,66 +3,84 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { StorefrontLayout } from '../components/StorefrontLayout';
 import { storefrontApi } from '../../../shared/api';
 
+const STATUS_ORDER = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+
+const PAYMENT_METHOD_LABELS = {
+  cash_on_delivery: 'Qapıda Nağd Ödəniş',
+  millikart: 'MilliKart',
+  birbank: 'BirBank',
+  pasha_pay: 'Pasha Pay',
+};
+
 export const OrderConfirmationPage = () => {
   const { orderNumber } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!location.state?.order);
+  const [lookupPhone, setLookupPhone] = useState('');
+  const [lookupError, setLookupError] = useState('');
 
   useEffect(() => {
     if (!order && orderNumber) {
-      loadOrder();
+      const savedPhone = localStorage.getItem('last_order_phone');
+      if (savedPhone) fetchOrder(orderNumber, savedPhone);
     }
   }, [orderNumber]);
 
-  const loadOrder = async () => {
+  const fetchOrder = async (num, ph) => {
     try {
       setLoading(true);
-      const orderData = await storefrontApi.getOrder(orderNumber);
+      setLookupError('');
+      const orderData = await storefrontApi.trackOrder(num, ph);
       setOrder(orderData);
-    } catch (err) {
-      console.error('Failed to load order:', err);
+    } catch {
+      setLookupError('Sifariş tapılmadı. Nömrə və ya telefonu yoxlayın.');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatPrice = (price) => {
-    return parseFloat(price || 0).toFixed(2);
+  const handleLookup = (e) => {
+    e.preventDefault();
+    if (!lookupPhone.trim()) return;
+    fetchOrder(orderNumber, lookupPhone.trim());
   };
+
+  const formatPrice = (p) => parseFloat(p || 0).toFixed(2);
 
   if (loading) {
     return (
       <StorefrontLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="loading-spinner h-12 w-12 mx-auto mb-4"></div>
-            <p className="text-gray-600">Yüklənir...</p>
-          </div>
+          <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
         </div>
       </StorefrontLayout>
     );
   }
 
+  // Lookup screen
   if (!order) {
     return (
       <StorefrontLayout>
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Sifariş tapılmadı
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Bu sifariş nömrəsi mövcud deyil
-          </p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
-          >
-            Ana səhifəyə qayıt
-          </button>
+        <div className="max-w-sm mx-auto px-4 py-20 text-center">
+          <p className="text-4xl mb-4">📦</p>
+          <h1 className="text-lg font-black text-gray-900 uppercase tracking-wider mb-1">Sifarişi Yoxla</h1>
+          <p className="text-sm text-gray-400 mb-6">#{orderNumber}</p>
+          <form onSubmit={handleLookup} className="space-y-3 text-left">
+            <input
+              type="tel"
+              value={lookupPhone}
+              onChange={e => setLookupPhone(e.target.value)}
+              placeholder="+994 XX XXX XX XX"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900"
+            />
+            {lookupError && <p className="text-red-500 text-xs">{lookupError}</p>}
+            <button type="submit" className="w-full py-3 bg-gray-900 text-white font-bold text-sm uppercase tracking-widest rounded-lg">
+              Tap
+            </button>
+          </form>
         </div>
       </StorefrontLayout>
     );
@@ -70,156 +88,160 @@ export const OrderConfirmationPage = () => {
 
   return (
     <StorefrontLayout>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Success Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-success-100 rounded-full mb-4">
-            <svg
-              className="w-10 h-10 text-success-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ✅ Sifarişiniz qəbul edildi!
-          </h1>
-          
-          <p className="text-gray-600 mb-1">
-            Sifariş nömrəsi: <span className="font-semibold text-gray-900">#{order.order_number}</span>
-          </p>
-          
-          <p className="text-sm text-gray-500">
-            Tezliklə sizinlə əlaqə saxlayacağıq
-          </p>
+      <div className="max-w-5xl mx-auto px-4 py-10">
+
+        {/* ── Top Header ── */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-black text-gray-900">Sifarişiniz üçün təşəkkür edirik!</h1>
+          <p className="text-sm text-gray-400 mt-1">Sifariş #{order.order_number}</p>
         </div>
 
-        {/* Order Details */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            📋 Sifariş detalları
-          </h2>
+        {/* ── 2-Column Layout ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-          {/* Order Items */}
-          <div className="space-y-3 mb-4">
-            {order.items?.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  {item.product_name} × {item.quantity}
-                </span>
-                <span className="font-medium text-gray-900">
-                  {formatPrice(item.price * item.quantity)} ₼
-                </span>
+          {/* ── LEFT COLUMN ── */}
+          <div className="space-y-5">
+
+            {/* Order Status Card */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center flex-shrink-0 text-xl">
+                  ✓
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-gray-900 mb-0.5">Sifarişiniz qəbul edildi!</h2>
+                  <p className="text-sm text-gray-500">
+                    Sifariş məlumatları qeydə alındı. Mağaza yaxın zamanda sifarişinizi təsdiqləyib sizinlə əlaqə saxlayacaq. E-poçt (əgər qeyd etmisinizsə) və ya SMS vasitəsilə status dəyişiklikləri barədə məlumatlandırılacaqsınız.
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold text-gray-900">Toplam</span>
-              <span className="text-2xl font-bold text-primary-600">
-                {formatPrice(order.total_amount)} ₼
-              </span>
             </div>
-          </div>
-        </div>
 
-        {/* Delivery Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            🚚 Çatdırılma məlumatları
-          </h2>
-
-          <div className="space-y-2 text-sm">
-            <div className="flex">
-              <span className="text-gray-600 w-24">Ad, Soyad:</span>
-              <span className="font-medium text-gray-900">{order.customer_full_name}</span>
-            </div>
-            
-            <div className="flex">
-              <span className="text-gray-600 w-24">Telefon:</span>
-              <span className="font-medium text-gray-900">{order.customer_phone}</span>
-            </div>
-            
-            {order.customer_email && (
-              <div className="flex">
-                <span className="text-gray-600 w-24">Email:</span>
-                <span className="font-medium text-gray-900">{order.customer_email}</span>
+            {/* Delivery Info Card */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Çatdırılma Məlumatları</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Ad, Soyad</span>
+                  <span className="font-semibold text-gray-900">{order.customer_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Telefon</span>
+                  <span className="font-semibold text-gray-900">{order.customer_phone}</span>
+                </div>
+                {order.customer_email && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Email</span>
+                    <span className="font-semibold text-gray-900">{order.customer_email}</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-50 pt-3 flex justify-between gap-4">
+                  <span className="text-gray-400 flex-shrink-0">Ünvan</span>
+                  <span className="font-semibold text-gray-900 text-right">
+                    {order.shipping_city}{order.shipping_district ? `, ${order.shipping_district}` : ''}, {order.shipping_address}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-gray-50 pt-3">
+                  <span className="text-gray-400">Ödəniş</span>
+                  <span className="font-semibold text-gray-900">{PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method}</span>
+                </div>
               </div>
-            )}
-            
-            <div className="flex">
-              <span className="text-gray-600 w-24">Ünvan:</span>
-              <span className="font-medium text-gray-900">
-                {order.shipping_city}
-                {order.shipping_district && `, ${order.shipping_district}`}
-                <br />
-                {order.shipping_address}
-              </span>
+            </div>
+
+            {/* Pickup receipt note */}
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 text-sm text-gray-600 flex items-start gap-3">
+              <span className="text-xl flex-shrink-0">💡</span>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Sifarişinizi aldıqda</p>
+                <p className="text-xs text-gray-500">
+                  Sifariş nömrənizi saxlayın: <span className="font-bold text-gray-900">#{order.order_number}</span>. Mağaza sizinlə əlaqə saxlayacaq, qəbuliyyat zamanı qapıda ödəyəcəksiniz.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="flex-1 py-3 text-sm font-bold border-2 border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors rounded-xl"
+              >
+                Ana Səhifə
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-3 text-sm font-bold bg-gray-900 text-white hover:bg-gray-700 transition-colors rounded-xl"
+              >
+                🖨️ Çap Et
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Payment Method */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <span className="text-2xl mr-3">💵</span>
-            <div>
-              <p className="font-medium text-gray-900">Ödəniş metodu</p>
-              <p className="text-sm text-gray-600">Qapıda nağd ödəniş</p>
+          {/* ── RIGHT COLUMN: Order Details ── */}
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-50">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Sifariş Detalları</p>
+            </div>
+
+            {/* Items */}
+            <div className="divide-y divide-gray-50">
+              {order.items?.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3 px-6 py-4">
+                  {item.product_image ? (
+                    <img src={item.product_image} alt={item.product_name} className="w-12 h-14 object-cover rounded-lg bg-gray-50 flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-14 bg-gray-50 rounded-lg flex items-center justify-center text-gray-300 flex-shrink-0 text-lg">📦</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{item.product_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">× {item.quantity}</p>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 flex-shrink-0">{formatPrice(item.unit_price * item.quantity)} ₼</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div className="px-6 py-5 bg-gray-50 border-t border-gray-100 space-y-2.5 text-sm">
+              <div className="flex justify-between text-gray-500">
+                <span>Ara cəm</span>
+                <span>{formatPrice(order.subtotal)} ₼</span>
+              </div>
+              {parseFloat(order.shipping_fee) > 0 && (
+                <div className="flex justify-between text-gray-500">
+                  <span>Çatdırılma</span>
+                  <span>{formatPrice(order.shipping_fee)} ₼</span>
+                </div>
+              )}
+              {parseFloat(order.discount) > 0 && (
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>Endirim</span>
+                  <span>-{formatPrice(order.discount)} ₼</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-gray-900 text-base pt-2.5 border-t border-gray-200">
+                <span>Ümumi Toplam</span>
+                <span>{formatPrice(order.total)} ₼</span>
+              </div>
+            </div>
+
+            {/* Support link */}
+            <div className="px-6 py-4 text-center">
+              <p className="text-xs text-gray-400">
+                Problemlə qarşılaşdınız?{' '}
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Sifariş nömrəm ${order.order_number} ilə bağlı sualım var.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-gray-700 underline hover:text-gray-900"
+                >
+                  Bizimlə əlaqə saxlayın
+                </a>
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Next Steps */}
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">📞 Növbəti addımlar:</h3>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li className="flex items-start">
-              <span className="text-primary-600 mr-2">1.</span>
-              Mağaza sizinlə tezliklə əlaqə saxlayacaq
-            </li>
-            <li className="flex items-start">
-              <span className="text-primary-600 mr-2">2.</span>
-              Sifariş təsdiqlənəcək və hazırlanacaq
-            </li>
-            <li className="flex items-start">
-              <span className="text-primary-600 mr-2">3.</span>
-              Məhsul ünvanınıza çatdırılacaq
-            </li>
-            <li className="flex items-start">
-              <span className="text-primary-600 mr-2">4.</span>
-              Qəbul edərkən ödəniş edəcəksiniz
-            </li>
-          </ul>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex-1 px-6 py-3 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            🏠 Ana səhifə
-          </button>
-          
-          <button
-            onClick={() => window.print()}
-            className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
-          >
-            🖨️ Çap et
-          </button>
         </div>
       </div>
     </StorefrontLayout>
   );
 };
-

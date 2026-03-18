@@ -18,9 +18,11 @@ class ProductCreate(ProductBase):
     """Schema for creating a product."""
     inventory_count: int = Field(default=0, ge=0)
     track_inventory: bool = True
+    is_new_arrival: bool = False
     allow_backorder: bool = False
     low_stock_threshold: int = Field(default=5, ge=0)
     images: Optional[List[str]] = Field(default_factory=list)
+    variants: Optional[List[dict]] = Field(default_factory=list) # [{color, size, inventory_count, sold_count}]
     
     @model_validator(mode='after')
     def compare_price_higher(self):
@@ -43,7 +45,9 @@ class ProductUpdate(BaseModel):
     allow_backorder: Optional[bool] = None
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
+    is_new_arrival: Optional[bool] = None
     images: Optional[List[str]] = None
+    variants: Optional[List[dict]] = None
 
 
 class ProductResponse(ProductBase):
@@ -56,7 +60,9 @@ class ProductResponse(ProductBase):
     low_stock_threshold: int
     is_active: bool
     is_featured: bool
+    is_new_arrival: bool
     images: List[str]
+    variants: List[dict]
     shop_id: int
     created_at: datetime
     updated_at: Optional[datetime]

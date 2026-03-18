@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
@@ -11,6 +11,7 @@ from app.models.product import Product
 from app.models.customer import Customer
 from app.models.order import Order, OrderStatus, PaymentStatus, PaymentMethod
 from app.models.order_item import OrderItem
+from app.models.coupon import Coupon
 from app.schemas.shop import ShopPublicResponse
 from app.schemas.product import ProductResponse, ProductListResponse
 from app.schemas.order import OrderCreate, OrderResponse
@@ -43,6 +44,7 @@ def list_products(
     category: Optional[str] = Query(None, description="Filter by category"),
     min_price: Optional[Decimal] = Query(None, ge=0, description="Minimum price in AZN"),
     max_price: Optional[Decimal] = Query(None, ge=0, description="Maximum price in AZN"),
+    is_new_arrival: Optional[bool] = Query(None, description="Filter by new arrivals"),
     sort_by: Optional[str] = Query("newest", description="Sort: newest, price_asc, price_desc, popular"),
     shop: Shop = Depends(get_current_shop),
     db: Session = Depends(get_db)
@@ -75,6 +77,9 @@ def list_products(
     
     if category:
         query = query.filter(Product.category == category)
+    
+    if is_new_arrival is not None:
+        query = query.filter(Product.is_new_arrival == is_new_arrival)
     
     if min_price is not None:
         query = query.filter(Product.price >= min_price)
@@ -160,9 +165,95 @@ def get_categories(
     return [cat[0] for cat in categories if cat[0]]
 
 
+from pydantic import BaseModel
+class CouponValidateRequest(BaseModel):
+    code: str
+    items: List[dict]  # [{"product_id": 1, "price": 10.50, "quantity": 1}]
+
+class CouponValidateResponse(BaseModel):
+    is_valid: bool
+    discount_amount: Decimal
+    message: str
+
+def calculate_discount(coupon: Coupon, order_items_data: list, db_products: dict) -> Decimal:
+    """Helper to calculate total discount for a given cart against a coupon."""
+    if not coupon.is_active:
+        return Decimal("0.00")
+    
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    if coupon.starts_at and now < coupon.starts_at:
+        return Decimal("0.00")
+    if coupon.ends_at and now > coupon.ends_at:
+        return Decimal("0.00")
+    if coupon.usage_limit is not None and coupon.usage_count >= coupon.usage_limit:
+        return Decimal("0.00")
+
+    applicable_total = Decimal("0.00")
+    
+    # Calculate how much of the cart is eligible for this discount
+    for item in order_items_data:
+        if hasattr(item, "get"):
+            product_id = item.get("product_id")
+            quantity = item.get("quantity", 1)
+        else:
+            product_id = getattr(item, "product_id", None)
+            quantity = getattr(item, "quantity", 1)
+        
+        # Determine unit price (from db if creating order, or from frontend request if just validating)
+        if product_id in db_products:
+            unit_price = db_products[product_id].price
+        else:
+            unit_price = Decimal(str(item.get("price", "0.00")))
+            
+        if coupon.scope == "all_products" or (coupon.applicable_product_ids and product_id in coupon.applicable_product_ids):
+            applicable_total += unit_price * quantity
+            
+    if applicable_total == Decimal("0.00"):
+        return Decimal("0.00")
+        
+    if coupon.discount_type == "percentage":
+        return min((applicable_total * coupon.discount_value) / Decimal("100.00"), applicable_total)
+    else: # fixed_amount
+        return min(coupon.discount_value, applicable_total)
+
+
+@router.post("/validate-coupon", response_model=CouponValidateResponse)
+def validate_coupon(
+    request: CouponValidateRequest,
+    shop: Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db)
+):
+    """Validate a coupon code and calculate the discount for the current cart."""
+    from sqlalchemy import func
+    coupon = db.query(Coupon).filter(
+        Coupon.shop_id == shop.id,
+        func.upper(Coupon.code) == request.code.strip().upper()
+    ).first()
+    
+    if not coupon:
+        return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kupon tapılmadı")
+        
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    if not coupon.is_active or (coupon.starts_at and now < coupon.starts_at) or (coupon.ends_at and now > coupon.ends_at):
+        return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kuponun vaxtı bitib və ya aktiv deyil")
+        
+    if coupon.usage_limit is not None and coupon.usage_count >= coupon.usage_limit:
+        return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kuponun istifadə limiti bitib")
+        
+    discount = calculate_discount(coupon, request.items, {})
+    
+    if discount == Decimal("0.00"):
+        return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Bu kupon səbətdəki məhsullara aid deyil")
+        
+    return CouponValidateResponse(is_valid=True, discount_amount=discount, message="Kupon uğurla tətbiq edildi")
+
+
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_data: OrderCreate,
+    background_tasks: BackgroundTasks,
     shop: Shop = Depends(get_current_shop),
     db: Session = Depends(get_db)
 ):
@@ -194,6 +285,8 @@ def create_order(
     order_items = []
     subtotal = Decimal('0.00')
     
+    # Calculate subtotal first
+    db_products = {}
     for item_data in order_data.items:
         # Get product
         product = db.query(Product).filter(
@@ -207,6 +300,8 @@ def create_order(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Product {item_data.product_id} not found or unavailable"
             )
+            
+        db_products[product.id] = product
         
         # Check stock availability
         if product.track_inventory:
@@ -234,11 +329,27 @@ def create_order(
         # Reduce inventory
         if product.track_inventory:
             product.inventory_count -= item_data.quantity
+            
+    # Apply discount if a valid code is provided
+    discount = Decimal('0.00')
+    if order_data.discount_code:
+        from sqlalchemy import func
+        coupon = db.query(Coupon).filter(
+            Coupon.shop_id == shop.id,
+            func.upper(Coupon.code) == order_data.discount_code.strip().upper()
+        ).with_for_update().first() # Lock coupon for usage limit
+        
+        if coupon:
+            discount = calculate_discount(coupon, order_data.items, db_products)
+            if discount > Decimal("0.00"):
+                coupon.usage_count += 1
+                db.add(coupon)
     
-    # Calculate total (for MVP: no shipping fee or discount)
+    # Calculate total
     shipping_fee = Decimal('0.00')  # TODO: Implement shipping calculation
-    discount = Decimal('0.00')  # TODO: Implement discount codes
     total = subtotal + shipping_fee - discount
+    if total < Decimal("0.00"):
+        total = Decimal("0.00")
     
     # Generate unique order number
     order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{db.query(Order).count() + 1:04d}"
@@ -288,7 +399,7 @@ def create_order(
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
-    
+
     return new_order
 
 

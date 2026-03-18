@@ -13,34 +13,47 @@ export const EditProductPage = () => {
     name: "",
     description: "",
     price: "",
+    compare_at_price: "",
     inventory_count: "",
     category: "",
-    image_url: "",
+    is_new_arrival: false,
   });
+
+  const [images, setImages] = useState([]); // Array of strings (URLs)
+  const [categories, setCategories] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    loadProduct();
+    loadProductAndCategories();
   }, [productId]);
 
-  const loadProduct = async () => {
+  const loadProductAndCategories = async () => {
     try {
       setPageLoading(true);
-      const product = await adminApi.getProduct(shopId, productId);
-      // images is a List[str] on the backend; grab first one for the image_url field
-      const firstImage = Array.isArray(product.images) && product.images.length > 0
-        ? product.images[0]
-        : "";
+      const [product, allProducts] = await Promise.all([
+        adminApi.getProduct(shopId, productId),
+        adminApi.getProducts(shopId).catch(() => [])
+      ]);
+
       setFormData({
         name: product.name || "",
         description: product.description || "",
         price: product.price || "",
+        compare_at_price: product.compare_at_price || "",
         inventory_count: product.inventory_count ?? "",
         category: product.category || "",
-        image_url: firstImage,
+        is_new_arrival: product.is_new_arrival || false,
       });
+
+      setImages(product.images || []);
+
+      if (allProducts) {
+        const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+        setCategories(cats);
+      }
     } catch (err) {
       console.error("❌ Failed to load product:", err);
       setErrors({ submit: "Məhsul yüklənərkən xəta baş verdi" });
@@ -55,14 +68,34 @@ export const EditProductPage = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  const handleImageUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = Array.from(files).map(file => adminApi.uploadImage(file));
+      const results = await Promise.all(uploadPromises);
+      const newUrls = results.map(r => r.url).filter(Boolean);
+      setImages(prev => [...prev, ...newUrls].slice(0, 5)); // cap at 5
+    } catch (err) {
+      alert("Şəkil yüklənərkən xəta baş verdi");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name) newErrors.name = "Məhsul adı tələb olunur";
+    if (!formData.name.trim()) newErrors.name = "Məhsul adı tələb olunur";
     if (!formData.price) newErrors.price = "Qiymət tələb olunur";
-    if (formData.price && parseFloat(formData.price) <= 0)
-      newErrors.price = "Qiymət 0-dan böyük olmalıdır";
-    if (!formData.inventory_count)
-      newErrors.inventory_count = "Stok miqdarı tələb olunur";
+    if (formData.price && parseFloat(formData.price) <= 0) newErrors.price = "Qiymət 0-dan böyük olmalıdır";
+    if (!formData.inventory_count) newErrors.inventory_count = "Stok miqdarı tələb olunur";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -70,24 +103,24 @@ export const EditProductPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    setLoading(true);
 
+    setLoading(true);
     try {
-      // Convert image_url string → images array (backend expects List[str])
-      const { image_url, ...rest } = formData;
       const productData = {
-        ...rest,
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
         price: parseFloat(formData.price),
+        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
         inventory_count: parseInt(formData.inventory_count),
-        images: image_url ? [image_url] : [],
+        category: formData.category.trim() || null,
+        images: images,
+        is_new_arrival: formData.is_new_arrival,
       };
 
       await adminApi.updateProduct(shopId, productId, productData);
       navigate(`/admin/shops/${shopId}`);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.detail || "Məhsul yenilənərkən xəta baş verdi";
-      setErrors({ submit: errorMessage });
+      setErrors({ submit: err.response?.data?.detail || "Xəta baş verdi" });
     } finally {
       setLoading(false);
     }
@@ -97,10 +130,7 @@ export const EditProductPage = () => {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="loading-spinner h-12 w-12 mx-auto mb-4"></div>
-            <p className="text-gray-600">Yüklənir...</p>
-          </div>
+          <div className="text-center"><div className="loading-spinner h-10 w-10 mx-auto mb-3" /><p className="text-gray-500 text-sm">Yüklənir...</p></div>
         </div>
       </AdminLayout>
     );
@@ -108,165 +138,168 @@ export const EditProductPage = () => {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Məhsulu Redaktə Et
-          </h1>
-          <p className="text-gray-600">Məhsul məlumatlarını yeniləyin</p>
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-gray-900 text-sm">
+            ← Geri
+          </button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => navigate(`/admin/shops/${shopId}`)}>Ləğv Et</Button>
+            <Button type="submit" form="product-form" variant="primary" loading={loading || uploading}>
+              Dəyişiklikləri Saxla
+            </Button>
+          </div>
         </div>
 
-        {/* Form Card */}
-        <div className="card">
-          <div className="card-body p-8">
-            {errors.submit && (
-              <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-lg">
-                <p className="text-danger-700 text-sm">{errors.submit}</p>
-              </div>
-            )}
+        {errors.submit && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
+          </div>
+        )}
 
-            <form onSubmit={handleSubmit}>
-              {/* Product Name */}
-              <Input
-                label="Məhsul Adı"
-                type="text"
-                name="name"
-                placeholder="Məsələn: Qırmızı Qızılgül Dəstəsi"
-                value={formData.name}
+        <form id="product-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* ── Left form fields (2/3 width) ── */}
+          <div className="lg:col-span-2 space-y-5 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3">Məhsul Məlumatları</h2>
+
+            <Input
+              label="Məhsul Adı *"
+              type="text"
+              name="name"
+              placeholder="Məsələn: Premium Eqvalipt"
+              value={formData.name}
+              onChange={handleChange}
+              error={errors.name}
+              required
+            />
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Təsvir</label>
+              <textarea
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                error={errors.name}
-                required
+                placeholder="Məhsulun tərkibi, ölçüləri, xüsusiyyətləri..."
+                rows="5"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 resize-none"
               />
+            </div>
 
-              {/* Description */}
-              <div className="mb-4">
-                <label htmlFor="description" className="label">
-                  Təsvir
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Qiymət (AZN) *</label>
+                <input
+                  type="number"
+                  name="price"
+                  step="0.01"
+                  min="0"
+                  value={formData.price}
                   onChange={handleChange}
-                  placeholder="Məhsul haqqında ətraflı məlumat..."
-                  rows="4"
-                  className="input-field"
+                  placeholder="29.99"
+                  className={`w-full px-4 py-2.5 text-sm border rounded-lg focus:outline-none focus:border-gray-500 ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
+                  required
                 />
               </div>
-
-              {/* Price */}
-              <div className="mb-4">
-                <label htmlFor="price" className="label">
-                  Qiymət (AZN) *
-                </label>
-                <div className="relative">
-                  <input
-                    id="price"
-                    type="number"
-                    name="price"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={handleChange}
-                    placeholder="29.99"
-                    className={`input-field pr-12 ${errors.price ? "input-error" : ""}`}
-                    required
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    ₼
-                  </span>
-                </div>
-                {errors.price && (
-                  <p className="error-message">{errors.price}</p>
-                )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Köhnə Qiymət (Endirim üçün)</label>
+                <input
+                  type="number"
+                  name="compare_at_price"
+                  step="0.01"
+                  min="0"
+                  value={formData.compare_at_price}
+                  onChange={handleChange}
+                  placeholder="39.99"
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                />
               </div>
+            </div>
 
-              {/* Stock Quantity */}
+            <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Stok Miqdarı"
+                label="Stok Miqdarı *"
                 type="number"
                 name="inventory_count"
-                placeholder="100"
+                placeholder="50"
                 value={formData.inventory_count}
                 onChange={handleChange}
                 error={errors.inventory_count}
                 required
               />
 
-              {/* Category */}
-              <Input
-                label="Kateqoriya (İstəyə bağlı)"
-                type="text"
-                name="category"
-                placeholder="Məsələn: Güllər, Xırdavat, Geyim"
-                value={formData.category}
-                onChange={handleChange}
-              />
-
-              {/* Image Upload */}
-              <div className="mb-4">
-                <label className="label">Məhsul Şəkli</label>
-                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:bg-gray-50 transition-colors">
-                  {formData.image_url ? (
-                    <div className="relative">
-                      <img src={formData.image_url} alt="Preview" className="h-32 object-contain" />
-                      <button
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, image_url: '' }))}
-                        className="absolute -top-2 -right-2 bg-danger-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-1 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div className="flex text-sm text-gray-600 justify-center">
-                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500">
-                          <span>Şəkil seçin</span>
-                          <input type="file" className="sr-only" accept="image/*" onChange={async (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            try {
-                              const res = await adminApi.uploadImage(file);
-                              setFormData(p => ({ ...p, image_url: res.url }));
-                            } catch (err) {
-                              alert("Şəkil yüklənərkən xəta baş verdi");
-                            }
-                          }} />
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500">PNG, JPG 5MB qədər</p>
-                    </div>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Kateqoriya</label>
+                <input
+                  type="text"
+                  name="category"
+                  list="category-list"
+                  placeholder="Seçin və ya yazın"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                />
+                <datalist id="category-list">
+                  {categories.map(c => <option key={c} value={c} />)}
+                </datalist>
               </div>
-
-              {/* Buttons */}
-              <div className="flex space-x-4">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={loading}
-                  className="flex-1"
-                >
-                  {loading ? "Yenilənir..." : "Dəyişiklikləri Saxla"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate(`/admin/shops/${shopId}`)}
-                  disabled={loading}
-                >
-                  Ləğv Et
-                </Button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
+
+          {/* ── Right sidebar / Images (1/3 width) ── */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">Görüntülər</h3>
+
+              {/* Grid of uploaded images */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {images.map((url, index) => (
+                  <div key={index} className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden border border-gray-100 group">
+                    <img src={url} alt={`Upload ${index}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >✕</button>
+                    {index === 0 && (
+                      <span className="absolute bottom-1 left-1 bg-gray-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Kaver</span>
+                    )}
+                  </div>
+                ))}
+
+                {/* Upload Placeholder slot */}
+                {images.length < 5 && (
+                  <label className={`aspect-square border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${uploading ? 'opacity-50' : ''}`}>
+                    <input type="file" className="sr-only" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} />
+                    <div className="text-center p-2">
+                      <span className="text-xl text-gray-400 font-light">+</span>
+                      <p className="text-2xl mb-1">🖼️</p>
+                      <p className="text-[11px] text-gray-400 font-medium">Əlavə Et ({images.length}/5)</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              <p className="text-[11px] text-gray-500">Maksimum 5 şəkil. İlk şəkil əsas (kaver) sayılır.</p>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">Ayarlar</h3>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="is_new_arrival"
+                  name="is_new_arrival"
+                  checked={formData.is_new_arrival || false}
+                  onChange={e => setFormData({ ...formData, is_new_arrival: e.target.checked })}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="is_new_arrival" className="text-sm font-semibold text-gray-700">Yeni Gələnlər (New Arrival)</label>
+              </div>
+            </div>
+          </div>
+
+        </form>
       </div>
     </AdminLayout>
   );

@@ -10,6 +10,7 @@ export const ShopManagePage = () => {
   
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState({ total_orders: 0, total_revenue: '0.00', pending_orders: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -22,43 +23,23 @@ export const ShopManagePage = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Loading shop data for shop ID:', shopId);
-      
-      // Load shop details and products in parallel
-      const [shopData, productsData] = await Promise.all([
+      const [shopData, productsData, statsData] = await Promise.all([
         adminApi.getShop(shopId),
-        adminApi.getProducts(shopId)
+        adminApi.getProducts(shopId),
+        adminApi.getStats(shopId).catch(() => ({ total_orders: 0, total_revenue: 0 }))
       ]);
       
-      console.log('✅ Shop loaded:', shopData);
-      console.log('✅ Products response:', productsData);
-      console.log('✅ Products type:', typeof productsData, Array.isArray(productsData));
-      
       setShop(shopData);
+      if (statsData) setStats(statsData);
       
-      // ✨ DEFENSIVE FIX: Handle various response formats
       let productsArray = [];
+      if (Array.isArray(productsData)) productsArray = productsData;
+      else if (productsData && Array.isArray(productsData.products)) productsArray = productsData.products;
+      else if (productsData && Array.isArray(productsData.data)) productsArray = productsData.data;
       
-      if (Array.isArray(productsData)) {
-        // Backend returns array directly: [product1, product2]
-        productsArray = productsData;
-      } else if (productsData && Array.isArray(productsData.products)) {
-        // Backend returns wrapped: { products: [product1, product2] }
-        productsArray = productsData.products;
-      } else if (productsData && Array.isArray(productsData.data)) {
-        // Backend returns wrapped: { data: [product1, product2] }
-        productsArray = productsData.data;
-      } else {
-        console.warn('⚠️ Unexpected products format:', productsData);
-        productsArray = [];
-      }
-      
-      console.log('✅ Final products array:', productsArray);
       setProducts(productsArray);
-      
     } catch (err) {
       console.error('❌ Failed to load shop data:', err);
-      console.error('❌ Error response:', err.response?.data);
       setError(err.response?.data?.detail || 'Failed to load shop');
     } finally {
       setLoading(false);
@@ -66,59 +47,33 @@ export const ShopManagePage = () => {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (!window.confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
-      return;
-    }
-    
+    if (!window.confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) return;
     try {
       await adminApi.deleteProduct(shopId, productId);
-      console.log('✅ Product deleted:', productId);
-      
-      // Reload products
       loadShopData();
     } catch (err) {
-      console.error('❌ Failed to delete product:', err);
       alert('Məhsul silinərkən xəta baş verdi');
     }
   };
 
-  const formatPrice = (price) => {
-    return parseFloat(price || 0).toFixed(2);
-  };
+  const formatPrice = (price) => parseFloat(price || 0).toFixed(2);
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="loading-spinner h-12 w-12 mx-auto mb-4"></div>
-            <p className="text-gray-600">Yüklənir...</p>
-          </div>
+          <div className="text-center"><div className="loading-spinner h-12 w-12 mx-auto mb-4" /><p className="text-gray-600">Yüklənir...</p></div>
         </div>
       </AdminLayout>
     );
   }
 
-  if (error) {
+  if (error || !shop) {
     return (
       <AdminLayout>
         <div className="text-center py-12">
-          <div className="text-danger-600 text-xl mb-4">❌</div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Xəta</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => navigate('/admin/dashboard')}>
-            Panel-ə Qayıt
-          </Button>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!shop) {
-    return (
-      <AdminLayout>
-        <div className="text-center py-12">
-          <h2 className="text-xl font-bold text-gray-900">Mağaza tapılmadı</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Xəta və ya Mağaza Tapılmadı</h2>
+          <Button onClick={() => navigate('/admin/dashboard')}>Panel-ə Qayıt</Button>
         </div>
       </AdminLayout>
     );
@@ -127,205 +82,157 @@ export const ShopManagePage = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Shop Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        
+        {/* ── Shop Header ── */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {shop.logo_url ? (
-                <img 
-                  src={shop.logo_url} 
-                  alt={shop.name}
-                  className="h-16 w-16 rounded-full object-cover"
-                />
+                <img src={shop.logo_url} alt={shop.name} className="h-14 w-14 rounded-full object-cover border" />
               ) : (
-                <div className="h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center">
-                  <span className="text-primary-600 font-bold text-2xl">
-                    {shop.name.charAt(0)}
-                  </span>
-                </div>
+                <div className="h-14 w-14 bg-gray-50 rounded-full flex items-center justify-center border"><span className="text-gray-600 font-bold text-xl">{shop.name.charAt(0)}</span></div>
               )}
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{shop.name}</h1>
-                <a 
-                  href={`http://${shop.subdomain}.1link.az`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:text-primary-700 flex items-center text-sm"
-                >
-                  🌐 {shop.subdomain}.1link.az
-                </a>
+                <h1 className="text-xl font-bold text-gray-900">{shop.name}</h1>
+                <p className="text-xs text-gray-400 mt-0.5">{shop.description || 'Təsvir əlavə edilməyib.'}</p>
               </div>
             </div>
-            
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/admin/shops/${shopId}/edit`)}
-            >
-              ✏️ Redaktə et
-            </Button>
+            <button onClick={() => navigate(`/admin/shops/${shopId}/edit`)} className="px-4 py-2 text-xs font-bold border border-gray-200 rounded-lg hover:bg-gray-50 transition">Redaktə et</button>
           </div>
-
-          {shop.description && (
-            <p className="text-gray-600">{shop.description}</p>
-          )}
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-lg p-6">
-            <div className="text-3xl font-bold text-blue-600">
-              {products.length}
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+            <div className="text-2xl font-black text-gray-900 font-mono">{products.length}</div>
+            <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mt-1">Məhsullar</div>
+          </div>
+          <div onClick={() => navigate(`/admin/shops/${shopId}/orders`)} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm cursor-pointer hover:border-gray-300 transition-colors flex justify-between items-center group">
+            <div>
+              <div className="text-2xl font-black text-gray-900 font-mono">{stats.total_orders || 0}</div>
+              <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mt-1">Sifarişlər</div>
             </div>
-            <div className="text-blue-700 font-medium">Məhsullar</div>
+            {stats.pending_orders > 0 && <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-lg">+{stats.pending_orders} Yeni</span>}
           </div>
-          
-          <div className="bg-green-50 rounded-lg p-6">
-            <div className="text-3xl font-bold text-green-600">0</div>
-            <div className="text-green-700 font-medium">Sifarişlər</div>
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+            <div className="text-2xl font-black text-gray-900 font-mono">{formatPrice(stats.total_revenue)} ₼</div>
+            <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mt-1">Ümumi Gəlir</div>
           </div>
-          
-          <div className="bg-orange-50 rounded-lg p-6">
-            <div className="text-3xl font-bold text-orange-600">0 ₼</div>
-            <div className="text-orange-700 font-medium">Gəlir</div>
-          </div>
+          <button onClick={() => { localStorage.setItem('dev_shop_subdomain', shop.subdomain); window.open(`http://localhost:5173`, '_blank'); }} className="bg-gray-950 hover:bg-gray-800 text-white rounded-xl p-5 shadow-sm flex flex-col justify-center transition-colors text-left group">
+            <div className="font-bold text-sm">Mağazaya Bax</div>
+            <div className="text-gray-400 text-[10px] mt-1 flex items-center gap-1 group-hover:underline"><span>{shop.subdomain}.1link.az</span> ↗</div>
+          </button>
         </div>
 
-        {/* Products Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Məhsullar</h2>
-            <Button
-              variant="primary"
+        {/* ── Products Table Section ── */}
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+            <h2 className="text-base font-bold text-gray-900">Məhsul Siyahısı</h2>
+            <button
               onClick={() => navigate(`/admin/shops/${shopId}/products/new`)}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition"
             >
-              + Məhsul əlavə et
-            </Button>
+              + Əlavə Et
+            </button>
           </div>
 
           {products.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Hələ məhsul yoxdur
-              </h3>
-              <p className="text-gray-600 mb-6">
-                İlk məhsulunuzu əlavə edin və satışa başlayın!
-              </p>
-              <Button
-                variant="primary"
-                onClick={() => navigate(`/admin/shops/${shopId}/products/new`)}
-              >
-                İlk Məhsulu əlavə Et
-              </Button>
+            <div className="text-center py-16">
+              <p className="text-4xl mb-3">📦</p>
+              <h3 className="text-sm font-bold text-gray-900 mb-1">Məhsul tapılmadı</h3>
+              <p className="text-xs text-gray-400 mb-4">İlk məhsulunuzu əlavə edərək satışa başlayın.</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  {/* Product Image */}
-                  <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                    {(() => {
-                      let images = [];
-                      try {
-                        if (product.images && typeof product.images === 'string') {
-                          images = JSON.parse(product.images);
-                        } else if (Array.isArray(product.images)) {
-                          images = product.images;
-                        }
-                      } catch (e) {
-                        images = [];
-                      }
-                      
-                      return images.length > 0 ? (
-                        <img
-                          src={images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <span className="text-4xl">📦</span>
-                      );
-                    })()}
-                  </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider font-bold">
+                    <th className="px-6 py-3">ID</th>
+                    <th className="px-6 py-3">Məhsul</th>
+                    <th className="px-6 py-3">Kateqoriya</th>
+                    <th className="px-6 py-3">Qiymət</th>
+                    <th className="px-6 py-3">Stok (Satılan / Qalan)</th>
+                    <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3 text-right">Əməliyyat</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 text-sm">
+                  {products.map((item, index) => {
+                    let images = [];
+                    try { images = typeof item.images === 'string' ? JSON.parse(item.images) : item.images || []; } catch {}
+                    const img = images[0];
 
-                  {/* Product Info */}
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-semibold text-gray-900 flex-1">
-                        {product.name}
-                      </h3>
-                      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        product.is_active
-                          ? 'bg-success-100 text-success-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {product.is_active ? 'Aktiv' : 'Deaktiv'}
-                      </span>
-                    </div>
+                    // Standardize variant structure support
+                    const variantsCount = Array.isArray(item.variants) ? item.variants.length : 0;
+                    const totalSold = Array.isArray(item.variants) 
+                      ? item.variants.reduce((acc, v) => acc + (v.sold_count || 0), 0) 
+                      : 0;
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-primary-600">
-                        {formatPrice(product.price)} ₼
-                      </span>
-                      {product.category && (
-                        <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                          {product.category}
-                        </span>
-                      )}
-                    </div>
-
-                    {product.track_inventory && (
-                      <div className="text-sm text-gray-600">
-                        Stok: {product.inventory_count} ədəd
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 pt-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate(`/admin/shops/${shopId}/products/${product.id}/edit`)}
-                        className="flex-1 text-sm"
-                      >
-                        ✏️ Redaktə
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="flex-1 text-sm"
-                      >
-                        🗑️ Sil
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-xs font-mono text-gray-400">#{item.id || index + 1}</td>
+                        <td className="px-6 py-4 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 flex items-center justify-center">
+                            {img ? <img src={img} alt={item.name} className="w-full h-full object-cover" /> : <span className="text-lg">📦</span>}
+                          </div>
+                          <div className="truncate max-w-[180px]">
+                            <p className="font-bold text-gray-900 truncate text-xs">{item.name}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4"><span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.category || 'N/A'}</span></td>
+                        <td className="px-6 py-4 font-mono text-xs text-gray-900">
+                          <span className="font-bold">{formatPrice(item.price)} ₼</span>
+                          {item.compare_at_price && parseFloat(item.compare_at_price) > parseFloat(item.price) && (
+                            <div className="text-[10px] text-gray-400 line-through mt-0.5">
+                              {formatPrice(item.compare_at_price)} ₼
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs">
+                            <span className="text-green-600 font-bold">{totalSold}</span> <span className="text-gray-300">/</span> <span className={`${item.inventory_count <= 5 ? 'text-red-500 font-bold' : 'text-gray-900'}`}>{item.inventory_count}</span>
+                          </div>
+                          {variantsCount > 0 && <p className="text-[10px] text-gray-400 mt-0.5">{variantsCount} variant</p>}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {item.is_active ? 'Aktiv' : 'Passiv'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => navigate(`/admin/shops/${shopId}/products/${item.id}/variants`)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 rounded border hover:border-blue-100 transition"
+                              title="Variantlar"
+                            >
+                              🎨
+                            </button>
+                            <button
+                              onClick={() => navigate(`/admin/shops/${shopId}/products/${item.id}/edit`)}
+                              className="p-1.5 text-gray-400 hover:text-gray-900 rounded border hover:border-gray-200 transition"
+                              title="Redaktə"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(item.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 rounded border hover:border-red-100 transition"
+                              title="Sil"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
-        {/* Storefront Link */}
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 text-center">
-          <h3 className="font-semibold text-gray-900 mb-2">
-            🌐 Mağazanızı görüntüləyin
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Müştərilərinizin gördüyü kimi
-          </p>
-          <a
-            href={`http://localhost:5173?subdomain=${shop.subdomain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block"
-          >
-            <Button variant="primary">
-              Mağazaya Bax
-            </Button>
-          </a>
-        </div>
       </div>
     </AdminLayout>
   );

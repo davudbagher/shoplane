@@ -1,10 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage, RegisterPage } from "./features/auth/pages";
 import { DashboardPage } from "./features/admin/pages/DashboardPage";
+import { CouponsPage } from "./features/admin/pages/CouponsPage";
 import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
 import { ShopManagePage } from "./features/admin/pages/ShopManagePage";
 import { CreateProductPage } from "./features/admin/pages/CreateProductPage";
 import { EditProductPage } from "./features/admin/pages/EditProductPage";
+import { ProductVariantsPage } from "./features/admin/pages/ProductVariantsPage";
+import { OrdersPage } from "./features/admin/pages/OrdersPage";
+import { OrderDetailPage } from "./features/admin/pages/OrderDetailPage";
 import { ShopHomePage } from "./features/storefront/pages/ShopHomePage";
 import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage";
 import { CartPage } from "./features/storefront/pages/CartPage";
@@ -60,6 +64,33 @@ function App() {
       />
 
       <Route
+        path="/admin/shops/:shopId/orders"
+        element={
+          <ProtectedRoute>
+            <OrdersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shops/:shopId/coupons"
+        element={
+          <ProtectedRoute>
+            <CouponsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shops/:shopId/orders/:orderId"
+        element={
+          <ProtectedRoute>
+            <OrderDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin/shops/:shopId/products/new"
         element={
           <ProtectedRoute>
@@ -73,6 +104,15 @@ function App() {
         element={
           <ProtectedRoute>
             <EditProductPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shops/:shopId/products/:productId/variants"
+        element={
+          <ProtectedRoute>
+            <ProductVariantsPage />
           </ProtectedRoute>
         }
       />

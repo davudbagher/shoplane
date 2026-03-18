@@ -52,11 +52,13 @@ def create_product(
         slug=product_data.name.lower().replace(" ", "-")[:50],  # Auto-generate slug
         description=product_data.description,
         price=product_data.price,
+        compare_at_price=product_data.compare_at_price,
         inventory_count=product_data.inventory_count,
         category=product_data.category,
         images=product_data.images or [],
         track_inventory=True,
         is_active=True,
+        is_new_arrival=product_data.is_new_arrival,
     )
     
     db.add(new_product)

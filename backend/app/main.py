@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload
+from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload, admin_coupons
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -64,6 +64,11 @@ app.include_router(
     admin_products.router,
     prefix="/admin/shops/{shop_id}/products",
     tags=["Admin - Products"]
+)
+app.include_router(
+    admin_coupons.router,
+    prefix="/admin/shops/{shop_id}/coupons",
+    tags=["Admin - Coupons"]
 )
 app.include_router(admin_orders.router)            # Order management (admin)
 app.include_router(storefront.router)              # Storefront (public)
