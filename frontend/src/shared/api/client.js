@@ -85,7 +85,7 @@ storefrontClient.interceptors.request.use(
       config.headers['X-Shop-Subdomain'] = subdomain;
       console.log('🌐 Using dev subdomain:', subdomain);
     } else {
-      // Production: Extract from hostname (e.g., 1001xirdavat.1link.az)
+      // Production: Extract from hostname (e.g., 1001xirdavat.1line.az)
       const hostname = window.location.hostname;
       if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
         const subdomainFromHost = hostname.split('.')[0];

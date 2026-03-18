@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: str = "localhost,127.0.0.1"
     
     # Domain Configuration
-    BASE_DOMAIN: str = "1link.az"
+    BASE_DOMAIN: str = "1line.az"
     ADMIN_SUBDOMAIN: str = "admin"
     
     # CORS

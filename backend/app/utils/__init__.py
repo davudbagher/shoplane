@@ -29,7 +29,7 @@
 # ]
 
 """
-Utility functions and dependencies for 1link.az
+Utility functions and dependencies for 1line.az
 """
 
 from app.utils.security import (

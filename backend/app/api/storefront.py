@@ -26,7 +26,7 @@ def get_shop_info(shop: Shop = Depends(get_current_shop)):
     """
     Get public shop information based on subdomain.
     
-    Example: When user visits cheechak.1link.az, this returns:
+    Example: When user visits cheechak.1line.az, this returns:
     - Shop name, logo, description
     - Contact info (phone, email, address)
     - Payment options (COD, MilliKart, etc.)

@@ -20,7 +20,7 @@ class ShopCreate(ShopBase):
         ..., 
         min_length=3, 
         max_length=30,
-        description="Subdomain (e.g., 'cheechak' for cheechak.1link.az)",
+        description="Subdomain (e.g., 'cheechak' for cheechak.1line.az)",
         pattern="^[a-z0-9-]+$"
     )
     

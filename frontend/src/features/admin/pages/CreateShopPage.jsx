@@ -132,7 +132,7 @@ export const CreateShopPage = () => {
                     required
                   />
                   <span className="px-4 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-600">
-                    .1link.az
+                    .1line.az
                   </span>
                 </div>
                 {errors.subdomain && (
@@ -140,7 +140,7 @@ export const CreateShopPage = () => {
                 )}
                 {formData.subdomain && !errors.subdomain && (
                   <p className="mt-2 text-sm text-success-600">
-                    ✓ Mağazanız bu linkdə olacaq: <strong>{formData.subdomain}.1link.az</strong>
+                    ✓ Mağazanız bu linkdə olacaq: <strong>{formData.subdomain}.1line.az</strong>
                   </p>
                 )}
               </div>

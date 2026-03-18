@@ -42,7 +42,7 @@ export const DashboardPage = () => {
             <span className="text-6xl">🏪</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            1link.az-a Xoş Gəldiniz!
+            1line.az-a Xoş Gəldiniz!
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             İlk onlayn mağazanızı yaradın və Azərbaycanda məhsullarınızı satmağa

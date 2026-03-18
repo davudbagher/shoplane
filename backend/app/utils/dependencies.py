@@ -58,7 +58,7 @@ def get_current_shop(
     
     Examples:
     - X-Shop-Subdomain: 1001xirdavat → returns shop with subdomain="1001xirdavat"
-    - Host: 1001xirdavat.1link.az → extracts "1001xirdavat"
+    - Host: 1001xirdavat.1line.az → extracts "1001xirdavat"
     """
     subdomain = None
     
@@ -70,15 +70,15 @@ def get_current_shop(
     # Method 2: Extract from Host header (for production)
     if not subdomain:
         host = request.headers.get("host", "")
-        if ".1link.az" in host:
-            subdomain = host.split(".1link.az")[0].lower().strip()
+        if ".1line.az" in host:
+            subdomain = host.split(".1line.az")[0].lower().strip()
             print(f"✅ Extracted subdomain from Host header: {subdomain}")
     
     if not subdomain:
         print(f"❌ No subdomain found. Headers: {dict(request.headers)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Shop subdomain required. Set X-Shop-Subdomain header or access via subdomain (e.g., shop.1link.az)"
+            detail="Shop subdomain required. Set X-Shop-Subdomain header or access via subdomain (e.g., shop.1line.az)"
         )
     
     # Query database for shop

@@ -89,7 +89,7 @@ export const RegisterPage = () => {
             <span className="text-5xl">🇦🇿</span>
           </div>
           <h1 className="text-4xl font-bold text-primary-700 mb-2">
-            1link.az
+            1line.az
           </h1>
           <p className="text-gray-600">
             Yeni Mağaza Yarat

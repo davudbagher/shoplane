@@ -60,4 +60,4 @@ class Shop(Base):
     coupons = relationship("Coupon", back_populates="shop", cascade="all, delete-orphan")
     
     def __repr__(self):
-        return f"<Shop {self.subdomain}.1link.az>"
+        return f"<Shop {self.subdomain}.1line.az>"

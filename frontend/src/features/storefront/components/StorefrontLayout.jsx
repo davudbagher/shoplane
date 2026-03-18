@@ -145,7 +145,7 @@ export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
         <div className="border-t border-gray-800 py-4">
           <div className="max-w-screen-xl mx-auto px-6 flex items-center justify-between text-xs text-gray-600">
             <span>© {new Date().getFullYear()} {shop?.name || 'Mağaza'}</span>
-            <a href="https://1link.az" className="hover:text-gray-400 transition-colors">Powered by 1link.az 🇦🇿</a>
+            <a href="https://1line.az" className="hover:text-gray-400 transition-colors">Powered by 1line.az 🇦🇿</a>
           </div>
         </div>
       </footer>

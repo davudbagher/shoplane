@@ -1,8 +1,8 @@
-# 🏪 Shoplane - 1link.az Backend
+# 🏪 Shoplane - 1line.az Backend
 
 **Multi-tenant e-commerce platform for Azerbaijan's local businesses**
 
-Transform Instagram/WhatsApp sellers into professional online shops with subdomain-based storefronts (e.g., `cheechak.1link.az`, `fitbaku.1link.az`).
+Transform Instagram/WhatsApp sellers into professional online shops with subdomain-based storefronts (e.g., `cheechak.1line.az`, `fitbaku.1line.az`).
 
 ---
 
@@ -72,7 +72,7 @@ nano .env  # Edit with your database credentials
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/shoplane_db
 SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
-BASE_DOMAIN=1link.az
+BASE_DOMAIN=1line.az
 ADMIN_SUBDOMAIN=admin
 ```
 
@@ -178,7 +178,7 @@ http://localhost:8000/docs
 ### Production Checklist
 - [ ] Set strong `SECRET_KEY` in `.env`
 - [ ] Use production PostgreSQL database
-- [ ] Configure wildcard DNS: `*.1link.az → server IP`
+- [ ] Configure wildcard DNS: `*.1line.az → server IP`
 - [ ] Set up HTTPS with Let's Encrypt
 - [ ] Configure CORS for frontend domain
 - [ ] Set `reload=False` in uvicorn
@@ -216,13 +216,13 @@ http://localhost:8000/docs
 
 ## 🤝 Contributing
 
-This is a private MVP. For collaboration inquiries: nigar@1link.az
+This is a private MVP. For collaboration inquiries: nigar@1line.az
 
 ---
 
 ## 📄 License
 
-Proprietary - © 2026 1link.az
+Proprietary - © 2026 1line.az
 
 ---
 

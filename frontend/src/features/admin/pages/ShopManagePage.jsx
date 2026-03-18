@@ -83,22 +83,8 @@ export const ShopManagePage = () => {
     <AdminLayout>
       <div className="space-y-6">
         
-        {/* ── Shop Header ── */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {shop.logo_url ? (
-                <img src={shop.logo_url} alt={shop.name} className="h-14 w-14 rounded-full object-cover border" />
-              ) : (
-                <div className="h-14 w-14 bg-gray-50 rounded-full flex items-center justify-center border"><span className="text-gray-600 font-bold text-xl">{shop.name.charAt(0)}</span></div>
-              )}
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{shop.name}</h1>
-                <p className="text-xs text-gray-400 mt-0.5">{shop.description || 'Təsvir əlavə edilməyib.'}</p>
-              </div>
-            </div>
-            <button onClick={() => navigate(`/admin/shops/${shopId}/edit`)} className="px-4 py-2 text-xs font-bold border border-gray-200 rounded-lg hover:bg-gray-50 transition">Redaktə et</button>
-          </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">Məhsul İdarəsi</h1>
         </div>
 
         {/* ── Stats ── */}
@@ -120,7 +106,7 @@ export const ShopManagePage = () => {
           </div>
           <button onClick={() => { localStorage.setItem('dev_shop_subdomain', shop.subdomain); window.open(`http://localhost:5173`, '_blank'); }} className="bg-gray-950 hover:bg-gray-800 text-white rounded-xl p-5 shadow-sm flex flex-col justify-center transition-colors text-left group">
             <div className="font-bold text-sm">Mağazaya Bax</div>
-            <div className="text-gray-400 text-[10px] mt-1 flex items-center gap-1 group-hover:underline"><span>{shop.subdomain}.1link.az</span> ↗</div>
+            <div className="text-gray-400 text-[10px] mt-1 flex items-center gap-1 group-hover:underline"><span>{shop.subdomain}.1line.az</span> ↗</div>
           </button>
         </div>
 

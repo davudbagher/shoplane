@@ -9,9 +9,9 @@ import axios from 'axios';
 const getShopSubdomain = () => {
   const hostname = window.location.hostname;
   
-  // Production: 1001xirdavat.1link.az
-  if (hostname.includes('.1link.az')) {
-    const subdomain = hostname.split('.1link.az')[0];
+  // Production: 1001xirdavat.1line.az
+  if (hostname.includes('.1line.az')) {
+    const subdomain = hostname.split('.1line.az')[0];
     console.log('🏪 Detected subdomain (production):', subdomain);
     return subdomain;
   }
@@ -42,9 +42,22 @@ const getShopSubdomain = () => {
   return null;
 };
 
+// Helper: Get API Base URL dynamically
+const getApiBaseURL = () => {
+  const hostname = window.location.hostname;
+  
+  // Production: Route to API subdomain on 1line.az
+  if (hostname.includes('.1line.az')) {
+    return 'https://api.1line.az';
+  }
+  
+  // Development/Local Fallback
+  return import.meta.env.VITE_API_URL || 'http://localhost:8000';
+};
+
 // Create storefront-specific axios instance
 const storefrontClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: getApiBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },

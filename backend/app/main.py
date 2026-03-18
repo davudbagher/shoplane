@@ -16,7 +16,7 @@ Base.metadata.create_all(bind=engine)
 async def lifespan(app: FastAPI):
     """Application lifespan - replaces deprecated on_event handlers."""
     # Startup
-    print("🚀 Starting 1link.az API...")
+    print("🚀 Starting 1line.az API...")
     print("📊 Database tables created/verified")
     print("🔐 JWT authentication enabled")
     print("🏪 Multi-tenant routing ready")
@@ -26,12 +26,12 @@ async def lifespan(app: FastAPI):
     yield  # App runs here
     
     # Shutdown
-    print("👋 Shutting down 1link.az API...")
+    print("👋 Shutting down 1line.az API...")
 
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="1link.az API",
+    title="1line.az API",
     description="Multi-tenant e-commerce platform for Azerbaijan",
     version="1.0.0",
     docs_url="/docs",
@@ -46,8 +46,8 @@ app.add_middleware(
         "http://localhost:3000",  # Local React dev server
         "http://localhost:5173",  # Local Vite dev server
         "http://localhost:5174",  # Local Vite dev server (alternate port)
-        "https://*.1link.az",     # Production subdomains
-        "https://1link.az",       # Main domain
+        "https://*.1line.az",     # Production subdomains
+        "https://1line.az",       # Main domain
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -85,7 +85,7 @@ def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "healthy",
-        "service": "1link.az API",
+        "service": "1line.az API",
         "version": "1.0.0",
         "message": "Shoplane backend is running! 🇦🇿"
     }
@@ -96,7 +96,7 @@ def health_check():
 def root():
     """API root endpoint."""
     return {
-        "message": "Welcome to 1link.az API - Multi-tenant E-commerce for Azerbaijan",
+        "message": "Welcome to 1line.az API - Multi-tenant E-commerce for Azerbaijan",
         "docs": "/docs",
         "redoc": "/redoc",
         "health": "/health",

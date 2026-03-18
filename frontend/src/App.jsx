@@ -9,6 +9,7 @@ import { EditProductPage } from "./features/admin/pages/EditProductPage";
 import { ProductVariantsPage } from "./features/admin/pages/ProductVariantsPage";
 import { OrdersPage } from "./features/admin/pages/OrdersPage";
 import { OrderDetailPage } from "./features/admin/pages/OrderDetailPage";
+import { ShopSettingsPage } from "./features/admin/pages/ShopSettingsPage";
 import { ShopHomePage } from "./features/storefront/pages/ShopHomePage";
 import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage";
 import { CartPage } from "./features/storefront/pages/CartPage";
@@ -59,6 +60,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ShopManagePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shops/:shopId/settings"
+        element={
+          <ProtectedRoute>
+            <ShopSettingsPage />
           </ProtectedRoute>
         }
       />
