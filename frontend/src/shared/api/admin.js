@@ -22,19 +22,18 @@ export const adminApi = {
   
   // Get all shops for current user
   // Get all shops for current user
-getShops: async () => {
-  const response = await adminClient.get('/admin/shops');
-  console.log('🔍 getShops response:', response.data);
-  
-  // Defensive: Handle array or wrapped object
-  if (Array.isArray(response.data)) {
-    return response.data;
-  } else if (response.data && response.data.shops) {
-    return response.data.shops;
-  }
-  
-  return []; // Fallback to empty array
-},
+  getShops: async () => {
+    const response = await adminClient.get('/admin/shops');
+
+    // Defensive: Handle array or wrapped object
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && response.data.shops) {
+      return response.data.shops;
+    }
+
+    return []; // Fallback to empty array
+  },
   
   // Get single shop by ID
   getShop: async (shopId) => {
@@ -64,21 +63,20 @@ getShops: async () => {
   
   // Get all products for a shop
   // Get products for a shop
-getProducts: async (shopId) => {
-  const response = await adminClient.get(`/admin/shops/${shopId}/products`);
-  console.log('🔍 getProducts response:', response.data);
-  
-  // Defensive: Handle array or wrapped object
-  if (Array.isArray(response.data)) {
-    return response.data;
-  } else if (response.data && response.data.products) {
-    return response.data.products;
-  } else if (response.data && response.data.data) {
-    return response.data.data;
-  }
-  
-  return []; // Fallback to empty array
-},
+  getProducts: async (shopId) => {
+    const response = await adminClient.get(`/admin/shops/${shopId}/products`);
+
+    // Defensive: Handle array or wrapped object
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && response.data.products) {
+      return response.data.products;
+    } else if (response.data && response.data.data) {
+      return response.data.data;
+    }
+
+    return []; // Fallback to empty array
+  },
   
   // Get single product
   getProduct: async (shopId, productId) => {

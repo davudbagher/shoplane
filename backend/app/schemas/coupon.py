@@ -40,3 +40,14 @@ class CouponResponse(CouponBase):
     updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CouponValidateRequest(BaseModel):
+    code: str
+    items: List[dict]  # [{"product_id": 1, "price": 10.50, "quantity": 1}]
+
+
+class CouponValidateResponse(BaseModel):
+    is_valid: bool
+    discount_amount: Decimal
+    message: str

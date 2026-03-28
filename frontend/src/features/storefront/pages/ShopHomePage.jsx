@@ -1,29 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StorefrontLayout } from '../components/StorefrontLayout';
 import { storefrontApi } from '../../../shared/api';
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Ən Yeni' },
+  { value: 'price_asc', label: 'Qiymət ↑' },
+  { value: 'price_desc', label: 'Qiymət ↓' },
+  { value: 'popular', label: 'Populyar' },
+];
+
 export const ShopHomePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('favorites') || '[]'); } catch { return []; }
+  });
 
   // Load categories once
   useEffect(() => {
-    storefrontApi.getCategories().then(data => setCategories(data || [])).catch(() => {});
+    storefrontApi.getCategories().then(data => setCategories(data || [])).catch(() => { });
   }, []);
 
-  // Load products whenever filters change
-  useEffect(() => {
-    loadProducts();
-  }, [selectedCategory, searchQuery, sortBy]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = {};
@@ -32,8 +38,8 @@ export const ShopHomePage = () => {
       } else if (selectedCategory) {
         params.category = selectedCategory;
       }
-      if (searchQuery)       params.search   = searchQuery;
-      if (sortBy)            params.sort_by  = sortBy;
+      if (searchQuery) params.search = searchQuery;
+      if (sortBy) params.sort_by = sortBy;
 
       const data = await storefrontApi.getProducts(params);
       setProducts(data.products || []);
@@ -43,31 +49,40 @@ export const ShopHomePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, searchQuery, sortBy]);
+
+  // Load products whenever filters change
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const handleSearch = useCallback((val) => {
     setSearchQuery(val);
   }, []);
 
-  const formatPrice = (price) => parseFloat(price || 0).toFixed(2);
+  const formatPrice = useCallback((price) => parseFloat(price || 0).toFixed(2), []);
 
-  const getFirstImage = (product) => {
+  const getFirstImage = useCallback((product) => {
     try {
       if (Array.isArray(product.images) && product.images.length > 0) return product.images[0];
       if (typeof product.images === 'string') {
         const parsed = JSON.parse(product.images);
         if (parsed.length > 0) return parsed[0];
       }
-    } catch {}
+    } catch { }
     return null;
-  };
+  }, []);
 
-  const sortOptions = [
-    { value: 'newest',     label: 'Ən Yeni' },
-    { value: 'price_asc',  label: 'Qiymət ↑' },
-    { value: 'price_desc', label: 'Qiymət ↓' },
-    { value: 'popular',    label: 'Populyar' },
-  ];
+  const toggleFavorite = useCallback((e, productId) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const isFav = prev.includes(productId);
+      const updated = isFav ? prev.filter(id => id !== productId) : [...prev, productId];
+      localStorage.setItem('favorites', JSON.stringify(updated));
+      window.dispatchEvent(new Event('favoritesUpdated'));
+      return updated;
+    });
+  }, []);
 
   return (
     <StorefrontLayout onSearch={handleSearch} searchValue={searchQuery}>
@@ -82,11 +97,10 @@ export const ShopHomePage = () => {
               <li>
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${
-                    !selectedCategory
-                      ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
-                      : 'text-gray-500 hover:text-gray-900 pl-3'
-                  }`}
+                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${!selectedCategory
+                    ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
+                    : 'text-gray-500 hover:text-gray-900 pl-3'
+                    }`}
                 >
                   Hamısı
                 </button>
@@ -94,11 +108,10 @@ export const ShopHomePage = () => {
               <li>
                 <button
                   onClick={() => setSelectedCategory('new_arrival')}
-                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${
-                    selectedCategory === 'new_arrival'
-                      ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
-                      : 'text-gray-500 hover:text-gray-900 pl-3'
-                  }`}
+                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${selectedCategory === 'new_arrival'
+                    ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
+                    : 'text-gray-500 hover:text-gray-900 pl-3'
+                    }`}
                 >
                   Yeni Gələnlər ✨
                 </button>
@@ -107,11 +120,10 @@ export const ShopHomePage = () => {
                 <li key={cat}>
                   <button
                     onClick={() => setSelectedCategory(cat)}
-                    className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${
-                      selectedCategory === cat
-                        ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
-                        : 'text-gray-500 hover:text-gray-900 pl-3'
-                    }`}
+                    className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${selectedCategory === cat
+                      ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
+                      : 'text-gray-500 hover:text-gray-900 pl-3'
+                      }`}
                   >
                     {cat}
                   </button>
@@ -141,17 +153,19 @@ export const ShopHomePage = () => {
               <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${
-                    !selectedCategory ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:border-gray-600'
-                  }`}
+                  className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${!selectedCategory
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-600'
+                    }`}
                 >Hamısı</button>
                 {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${
-                      selectedCategory === cat ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:border-gray-600'
-                    }`}
+                    className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${selectedCategory === cat
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'border-gray-300 text-gray-600 hover:border-gray-600'
+                      }`}
                   >{cat}</button>
                 ))}
               </div>
@@ -162,7 +176,7 @@ export const ShopHomePage = () => {
                 onChange={e => setSortBy(e.target.value)}
                 className="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-600 bg-white cursor-pointer"
               >
-                {sortOptions.map(opt => (
+                {SORT_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -235,6 +249,22 @@ export const ShopHomePage = () => {
                         </div>
                       )}
 
+                      {/* Heart icon + Hover overlay */}
+                      <button
+                        onClick={(e) => toggleFavorite(e, product.id)}
+                        className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
+                        style={favorites.includes(product.id) ? { opacity: 1 } : {}}
+                        title={favorites.includes(product.id) ? 'Sevimlilərdən çıxar' : 'Sevimlilərə əlavə et'}
+                      >
+                        <svg className="w-4 h-4" fill={favorites.includes(product.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            className={favorites.includes(product.id) ? 'text-red-500' : 'text-gray-600'}
+                          />
+                        </svg>
+                      </button>
+
                       {/* Hover overlay with cart icon */}
                       <div className="absolute inset-0 flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pb-4">
                         <button
@@ -262,9 +292,9 @@ export const ShopHomePage = () => {
                           Stokda Yoxdur
                         </span>
                       )}
-                      
+
                       {product.compare_at_price && parseFloat(product.compare_at_price) > parseFloat(product.price) && (
-                        <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide shadow-sm">
+                        <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide shadow-sm">
                           -{Math.round(((parseFloat(product.compare_at_price) - parseFloat(product.price)) / parseFloat(product.compare_at_price)) * 100)}%
                         </span>
                       )}

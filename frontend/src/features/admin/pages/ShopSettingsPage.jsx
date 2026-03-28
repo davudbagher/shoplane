@@ -17,6 +17,7 @@ export const ShopSettingsPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
@@ -46,6 +47,21 @@ export const ShopSettingsPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setShop(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await adminApi.uploadImage(file);
+      setShop(prev => ({ ...prev, logo_url: result.url }));
+    } catch (err) {
+      alert("Loqo yüklənərkən xəta baş verdi");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -137,6 +153,39 @@ export const ShopSettingsPage = () => {
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-black focus:border-black text-sm"
               />
+            </div>
+          </div>
+
+          {/* Logo Settings */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-3">Mağaza Loqosu (Logo)</h2>
+            
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Loqo Şəkli</label>
+              <div className="flex items-center gap-4">
+                {shop.logo_url && shop.logo_url.trim() !== '' ? (
+                  <div className="relative h-16 w-16 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center">
+                    <img src={shop.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setShop(prev => ({ ...prev, logo_url: '' }))}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm"
+                    >✕</button>
+                  </div>
+                ) : (
+                  <div className="h-16 w-16 bg-gray-100 rounded-lg flex items-center justify-center text-2xl border border-dashed border-gray-300">
+                    🏪
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-1">
+                  <label className={`cursor-pointer px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors inline-block text-center ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <input type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleLogoUpload} disabled={uploading} />
+                    {uploading ? 'Yüklənir...' : 'Loqo Yüklə'}
+                  </label>
+                  <p className="text-[10px] text-gray-400">Məsləhət görülür: PNG formatı, max hündürlük h-12</p>
+                </div>
+              </div>
             </div>
           </div>
 

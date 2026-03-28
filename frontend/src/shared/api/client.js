@@ -47,11 +47,6 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Handle network errors
-    if (!error.response) {
-      console.error('Network error - check if backend is running at', API_BASE_URL);
-    }
-
     return Promise.reject(error);
   }
 );
@@ -64,52 +59,3 @@ export const authClient = axios.create({
   },
   timeout: 15000,
 });
-
-// ===== 3. STOREFRONT CLIENT (Public Shop Access with Subdomain) =====
-export const storefrontClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
-});
-
-// Add subdomain header to storefront requests automatically
-storefrontClient.interceptors.request.use(
-  (config) => {
-    // Get subdomain from localStorage or URL query
-    const subdomain = localStorage.getItem('subdomain') || 
-                     new URLSearchParams(window.location.search).get('subdomain');
-    
-    if (subdomain) {
-      config.headers['X-Shop-Subdomain'] = subdomain;
-      console.log('🌐 Using dev subdomain:', subdomain);
-    } else {
-      // Production: Extract from hostname (e.g., 1001xirdavat.1line.az)
-      const hostname = window.location.hostname;
-      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-        const subdomainFromHost = hostname.split('.')[0];
-        if (subdomainFromHost !== '1link') { // Not the main domain
-          config.headers['X-Shop-Subdomain'] = subdomainFromHost;
-          console.log('🌐 Using subdomain from host:', subdomainFromHost);
-        }
-      }
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Handle network errors for storefront
-storefrontClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (!error.response) {
-      console.error('🔥 Storefront network error - check backend connection');
-    }
-    return Promise.reject(error);
-  }
-);

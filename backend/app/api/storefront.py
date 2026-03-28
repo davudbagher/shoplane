@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from typing import List, Optional
 from math import ceil
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
+import uuid
+
 from app.database import get_db
 from app.models.shop import Shop
 from app.models.product import Product
@@ -16,6 +18,7 @@ from app.schemas.shop import ShopPublicResponse
 from app.schemas.product import ProductResponse, ProductListResponse
 from app.schemas.order import OrderCreate, OrderResponse
 from app.schemas.customer import CustomerCreate, CustomerResponse
+from app.schemas.coupon import CouponValidateRequest, CouponValidateResponse
 from app.utils.dependencies import get_current_shop
 
 router = APIRouter(prefix="/storefront", tags=["Storefront - Public"])
@@ -165,22 +168,11 @@ def get_categories(
     return [cat[0] for cat in categories if cat[0]]
 
 
-from pydantic import BaseModel
-class CouponValidateRequest(BaseModel):
-    code: str
-    items: List[dict]  # [{"product_id": 1, "price": 10.50, "quantity": 1}]
-
-class CouponValidateResponse(BaseModel):
-    is_valid: bool
-    discount_amount: Decimal
-    message: str
-
 def calculate_discount(coupon: Coupon, order_items_data: list, db_products: dict) -> Decimal:
     """Helper to calculate total discount for a given cart against a coupon."""
     if not coupon.is_active:
         return Decimal("0.00")
     
-    from datetime import timezone
     now = datetime.now(timezone.utc)
     if coupon.starts_at and now < coupon.starts_at:
         return Decimal("0.00")
@@ -225,7 +217,6 @@ def validate_coupon(
     db: Session = Depends(get_db)
 ):
     """Validate a coupon code and calculate the discount for the current cart."""
-    from sqlalchemy import func
     coupon = db.query(Coupon).filter(
         Coupon.shop_id == shop.id,
         func.upper(Coupon.code) == request.code.strip().upper()
@@ -234,7 +225,6 @@ def validate_coupon(
     if not coupon:
         return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kupon tapılmadı")
         
-    from datetime import timezone
     now = datetime.now(timezone.utc)
     if not coupon.is_active or (coupon.starts_at and now < coupon.starts_at) or (coupon.ends_at and now > coupon.ends_at):
         return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kuponun vaxtı bitib və ya aktiv deyil")
@@ -333,7 +323,6 @@ def create_order(
     # Apply discount if a valid code is provided
     discount = Decimal('0.00')
     if order_data.discount_code:
-        from sqlalchemy import func
         coupon = db.query(Coupon).filter(
             Coupon.shop_id == shop.id,
             func.upper(Coupon.code) == order_data.discount_code.strip().upper()
@@ -351,8 +340,8 @@ def create_order(
     if total < Decimal("0.00"):
         total = Decimal("0.00")
     
-    # Generate unique order number
-    order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{db.query(Order).count() + 1:04d}"
+    # Generate unique order number (UUID suffix prevents race conditions)
+    order_number = f"ORD-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     
     # Find or create customer (lookup by phone only - no shop_id on customers table)
     customer = db.query(Customer).filter(

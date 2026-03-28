@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { StorefrontLayout } from '../components/StorefrontLayout';
 import { storefrontApi } from '../../../shared/api';
@@ -15,14 +15,14 @@ export const ProductDetailPage = () => {
   const [addedToCart, setAddedToCart] = useState(false);
   const [openAccordion, setOpenAccordion] = useState('description');
   const [selectedSize, setSelectedSize] = useState("");
+  const [isFavorite, setIsFavorite] = useState(false);
 
-  useEffect(() => {
-    loadProductData();
-  }, [productId]);
+  const formatPrice = useCallback((price) => parseFloat(price || 0).toFixed(2), []);
 
-  const loadProductData = async () => {
+  const loadProductData = useCallback(async () => {
     try {
       setLoading(true);
+      setSelectedImageIndex(0);
       const [productData, shopData] = await Promise.all([
         storefrontApi.getProduct(productId),
         storefrontApi.getShop()
@@ -32,13 +32,10 @@ export const ProductDetailPage = () => {
       setShop(shopData);
 
       // Load recommended items (same category or others from shop)
-      if (productData.category) {
-        const recoData = await storefrontApi.getProducts({ category: productData.category });
-        setRecommended((recoData.products || []).filter(p => p.id !== productData.id).slice(0, 4));
-      } else {
-        const recoData = await storefrontApi.getProducts({});
-        setRecommended((recoData.products || []).filter(p => p.id !== productData.id).slice(0, 4));
-      }
+      const recoData = await storefrontApi.getProducts(
+        productData.category ? { category: productData.category } : {}
+      );
+      setRecommended((recoData.products || []).filter(p => p.id !== productData.id).slice(0, 4));
 
     } catch (err) {
       console.error('Failed to load product:', err);
@@ -46,23 +43,27 @@ export const ProductDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
 
-  const formatPrice = (price) => parseFloat(price || 0).toFixed(2);
+  useEffect(() => {
+    loadProductData();
+  }, [loadProductData]);
 
   // Parse product images
-  let productImages = [];
-  try {
-    if (typeof product?.images === 'string') {
-      productImages = JSON.parse(product.images);
-    } else if (Array.isArray(product?.images)) {
-      productImages = product.images;
+  const productImages = useMemo(() => {
+    try {
+      if (typeof product?.images === 'string') {
+        return JSON.parse(product.images);
+      } else if (Array.isArray(product?.images)) {
+        return product.images;
+      }
+    } catch {
+      // fall through
     }
-  } catch (e) {
-    productImages = [];
-  }
+    return [];
+  }, [product?.images]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = cart.findIndex(item => item.product_id === product.id);
 
@@ -84,13 +85,38 @@ export const ProductDetailPage = () => {
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
     window.dispatchEvent(new Event('cartUpdated'));
-  };
+  }, [product, productImages, selectedSize]);
 
-  const handleWhatsAppOrder = () => {
+  const handleWhatsAppOrder = useCallback(() => {
     if (!shop?.phone) return alert('Mağaza telefon nömrəsi tapılmadı');
     const message = `Salam! ${product.name} məhsulunu sifariş etmək istəyirəm.\n\nQiymət: ${formatPrice(product.price)} ₼\n\nLink: ${window.location.href}`;
     window.open(`https://wa.me/${shop.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-  };
+  }, [shop, product, formatPrice]);
+
+  // Sync favorites state when product loads
+  useEffect(() => {
+    if (product) {
+      try {
+        const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+        setIsFavorite(favs.includes(product.id));
+      } catch { setIsFavorite(false); }
+    }
+  }, [product]);
+
+  const toggleFavorite = useCallback(() => {
+    if (!product) return;
+    const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+    let updated;
+    if (favs.includes(product.id)) {
+      updated = favs.filter(id => id !== product.id);
+      setIsFavorite(false);
+    } else {
+      updated = [...favs, product.id];
+      setIsFavorite(true);
+    }
+    localStorage.setItem('favorites', JSON.stringify(updated));
+    window.dispatchEvent(new Event('favoritesUpdated'));
+  }, [product]);
 
   if (loading) {
     return (
@@ -110,7 +136,12 @@ export const ProductDetailPage = () => {
         <div className="text-center py-24">
           <p className="text-5xl mb-4">😕</p>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Məhsul tapılmadı</h2>
-          <Button onClick={() => navigate('/')} className="mt-4">Mağazaya Qayıt</Button>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-6 py-2 bg-gray-950 text-white text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+          >
+            Mağazaya Qayıt
+          </button>
         </div>
       </StorefrontLayout>
     );
@@ -224,21 +255,19 @@ export const ProductDetailPage = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-900">Ölçü Seçimi:</p>
                 <div className="flex gap-2 flex-wrap">
                   {product.variants.map((v, idx) => {
-                    // Pull size property correctly
-                    const sizeLabel = v.size || Object.values(v).find(val => typeof val === 'string' && val.length < 5); 
+                    const sizeLabel = v.size || Object.values(v).find(val => typeof val === 'string' && val.length < 5);
                     if (!sizeLabel) return null;
                     return (
                       <button
                         key={idx}
                         onClick={() => setSelectedSize(sizeLabel)}
                         disabled={v.inventory_count <= 0}
-                        className={`px-3 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                          v.inventory_count <= 0 
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through'
-                            : selectedSize === sizeLabel
-                              ? 'bg-gray-950 text-white border-gray-950'
-                              : 'bg-white text-gray-900 border-gray-200 hover:border-gray-900'
-                        }`}
+                        className={`px-3 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${v.inventory_count <= 0
+                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through'
+                          : selectedSize === sizeLabel
+                            ? 'bg-gray-950 text-white border-gray-950'
+                            : 'bg-white text-gray-900 border-gray-200 hover:border-gray-900'
+                          }`}
                       >
                         {sizeLabel}
                       </button>
@@ -259,14 +288,31 @@ export const ProductDetailPage = () => {
                 {addedToCart ? 'Səbətə Əlavə Edildi ✓' : 'SƏBƏTƏ ƏLAVƏ ET'}
               </button>
 
-              {shop?.phone && (
+              {/* Favorite + WhatsApp row */}
+              <div className="flex gap-2">
                 <button
-                  onClick={handleWhatsAppOrder}
-                  className="w-full py-3.5 text-sm font-bold border-2 border-gray-950 text-gray-950 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                  onClick={toggleFavorite}
+                  className={`flex-shrink-0 py-3.5 px-4 text-sm font-bold border-2 transition-colors flex items-center justify-center gap-2 ${
+                    isFavorite
+                      ? 'border-red-500 text-red-500 bg-red-50 hover:bg-red-100'
+                      : 'border-gray-950 text-gray-950 hover:bg-gray-50'
+                  }`}
+                  title={isFavorite ? 'Sevimlilərdən çıxar' : 'Sevimlilərə əlavə et'}
                 >
-                  WHATSAPP SİFARİŞ
+                  <svg className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
                 </button>
-              )}
+
+                {shop?.phone && (
+                  <button
+                    onClick={handleWhatsAppOrder}
+                    className="flex-1 py-3.5 text-sm font-bold border-2 border-gray-950 text-gray-950 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    WHATSAPP SİFARİŞ
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Accordions (Details, Returns) */}

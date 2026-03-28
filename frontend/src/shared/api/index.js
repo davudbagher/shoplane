@@ -2,7 +2,7 @@
 // All API modules are re-exported here for easy importing
 
 // ===== CLIENT INSTANCES =====
-export { apiClient, authClient, storefrontClient } from './client';
+export { apiClient, authClient } from './client';
 
 // ===== API MODULES =====
 

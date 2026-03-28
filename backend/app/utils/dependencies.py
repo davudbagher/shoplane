@@ -3,11 +3,14 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional
 from jose import JWTError, jwt
+import logging
 
 from app.database import get_db
 from app.models.shop import Shop
 from app.models.user import User
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ===== JWT TOKEN AUTHENTICATION =====
@@ -65,17 +68,17 @@ def get_current_shop(
     # Method 1: Check X-Shop-Subdomain header (most reliable for dev)
     if x_shop_subdomain:
         subdomain = x_shop_subdomain.lower().strip()
-        print(f"✅ Found subdomain in X-Shop-Subdomain header: {subdomain}")
+        logger.debug("Found subdomain in X-Shop-Subdomain header: %s", subdomain)
     
     # Method 2: Extract from Host header (for production)
     if not subdomain:
         host = request.headers.get("host", "")
         if ".1line.az" in host:
             subdomain = host.split(".1line.az")[0].lower().strip()
-            print(f"✅ Extracted subdomain from Host header: {subdomain}")
+            logger.debug("Extracted subdomain from Host header: %s", subdomain)
     
     if not subdomain:
-        print(f"❌ No subdomain found. Headers: {dict(request.headers)}")
+        logger.warning("No subdomain found in request headers")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Shop subdomain required. Set X-Shop-Subdomain header or access via subdomain (e.g., shop.1line.az)"
@@ -88,13 +91,13 @@ def get_current_shop(
     ).first()
     
     if not shop:
-        print(f"❌ Shop not found in database: {subdomain}")
+        logger.warning("Shop not found in database: %s", subdomain)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Shop '{subdomain}' not found or inactive"
         )
     
-    print(f"✅ Found shop: {shop.name} (ID: {shop.id})")
+    logger.debug("Found shop: %s (ID: %d)", shop.name, shop.id)
     return shop
 
 
@@ -110,11 +113,6 @@ def verify_shop_owner(
     
     NOTE: Requires get_current_user to be called first in the endpoint!
     """
-    # This will be used in endpoints like:
-    # def create_product(shop_id: int, current_user: User = Depends(get_current_user), ...)
-    # So we don't need to import get_current_user here
-    
-    # For now, just return the shop (ownership check happens in endpoint)
     shop = db.query(Shop).filter(Shop.id == shop_id).first()
     
     if not shop:

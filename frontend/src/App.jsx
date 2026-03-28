@@ -15,13 +15,14 @@ import { ProductDetailPage } from "./features/storefront/pages/ProductDetailPage
 import { CartPage } from "./features/storefront/pages/CartPage";
 import { CheckoutPage } from './features/storefront/pages/CheckoutPage';
 import { OrderConfirmationPage } from './features/storefront/pages/OrderConfirmationPage';
+import { FavoritesPage } from './features/storefront/pages/FavoritesPage';
 import { ProtectedRoute } from "./shared/components";
 
 function App() {
   // Detect if we're on admin subdomain or path
-  const isAdminRoute = window.location.pathname.startsWith('/admin') || 
-                       window.location.pathname.startsWith('/login') || 
-                       window.location.pathname.startsWith('/register');
+  const isAdminRoute = window.location.pathname.startsWith('/admin') ||
+    window.location.pathname.startsWith('/login') ||
+    window.location.pathname.startsWith('/register');
 
   return (
     <Routes>
@@ -34,6 +35,7 @@ function App() {
       <Route path="/products/:productId" element={<ProductDetailPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/favorites" element={<FavoritesPage />} />
       <Route path="/orders/:orderNumber" element={<OrderConfirmationPage />} />
 
       {/* ===== ADMIN ROUTES (Protected - Shop Owner) ===== */}
@@ -129,13 +131,13 @@ function App() {
 
       {/* ===== FALLBACK ROUTES ===== */}
       {/* Catch unknown routes - redirect based on context */}
-      <Route 
-        path="*" 
+      <Route
+        path="*"
         element={
-          isAdminRoute 
-            ? <Navigate to="/admin/dashboard" replace /> 
+          isAdminRoute
+            ? <Navigate to="/admin/dashboard" replace />
             : <Navigate to="/" replace />
-        } 
+        }
       />
     </Routes>
   );
