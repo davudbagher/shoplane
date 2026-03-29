@@ -16,13 +16,18 @@ import { CartPage } from "./features/storefront/pages/CartPage";
 import { CheckoutPage } from './features/storefront/pages/CheckoutPage';
 import { OrderConfirmationPage } from './features/storefront/pages/OrderConfirmationPage';
 import { FavoritesPage } from './features/storefront/pages/FavoritesPage';
+import { LandingPage } from './features/landing/pages/LandingPage';
 import { ProtectedRoute } from "./shared/components";
+import { getShopSubdomain } from "./shared/api/storefront";
 
 function App() {
   // Detect if we're on admin subdomain or path
   const isAdminRoute = window.location.pathname.startsWith('/admin') ||
     window.location.pathname.startsWith('/login') ||
     window.location.pathname.startsWith('/register');
+
+  const shopSubdomain = getShopSubdomain();
+  const isLandingPage = shopSubdomain === null;
 
   return (
     <Routes>
@@ -31,7 +36,7 @@ function App() {
       <Route path="/register" element={<RegisterPage />} />
 
       {/* ===== STOREFRONT ROUTES (Public - Customer Facing) ===== */}
-      <Route path="/" element={<ShopHomePage />} />
+      <Route path="/" element={isLandingPage ? <LandingPage /> : <ShopHomePage />} />
       <Route path="/products/:productId" element={<ProductDetailPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />

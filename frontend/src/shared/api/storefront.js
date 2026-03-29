@@ -6,11 +6,13 @@ import axios from 'axios';
  */
 
 // Helper: Get shop subdomain from URL or localStorage
-const getShopSubdomain = () => {
+export const getShopSubdomain = () => {
   const hostname = window.location.hostname;
   
   // Production: shop.1line.az
   if (hostname.includes('.1line.az')) {
+    // If it's literally just 'www.1line.az', we treat it as no subdomain
+    if (hostname === 'www.1line.az') return null;
     return hostname.split('.1line.az')[0];
   }
   
@@ -18,11 +20,6 @@ const getShopSubdomain = () => {
   if (hostname === 'localhost' || hostname.startsWith('192.168') || hostname.startsWith('127.0.0.1')) {
     const devSubdomain = localStorage.getItem('dev_shop_subdomain');
     if (devSubdomain) return devSubdomain;
-    
-    // Fallback to env var or default
-    const fallback = import.meta.env.VITE_DEFAULT_SHOP || 'cheechak';
-    localStorage.setItem('dev_shop_subdomain', fallback);
-    return fallback;
   }
   
   return null;
