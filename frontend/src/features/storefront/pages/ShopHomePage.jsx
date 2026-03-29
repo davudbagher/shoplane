@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StorefrontLayout } from '../components/StorefrontLayout';
+import { ProductCard } from '../components/ProductCard';
 import { storefrontApi } from '../../../shared/api';
 
 const SORT_OPTIONS = [
@@ -11,7 +12,6 @@ const SORT_OPTIONS = [
 ];
 
 export const ShopHomePage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -60,18 +60,6 @@ export const ShopHomePage = () => {
     setSearchQuery(val);
   }, []);
 
-  const formatPrice = useCallback((price) => parseFloat(price || 0).toFixed(2), []);
-
-  const getFirstImage = useCallback((product) => {
-    try {
-      if (Array.isArray(product.images) && product.images.length > 0) return product.images[0];
-      if (typeof product.images === 'string') {
-        const parsed = JSON.parse(product.images);
-        if (parsed.length > 0) return parsed[0];
-      }
-    } catch { }
-    return null;
-  }, []);
 
   const toggleFavorite = useCallback((e, productId) => {
     e.stopPropagation();
@@ -225,108 +213,14 @@ export const ShopHomePage = () => {
           {/* Product Grid */}
           {!loading && products.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-              {products.map((product) => {
-                const img = getFirstImage(product);
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => navigate(`/products/${product.id}`)}
-                    className="group cursor-pointer"
-                  >
-                    {/* Image */}
-                    <div className="relative overflow-hidden bg-gray-100 aspect-[3/4] mb-3">
-                      {img ? (
-                        <img
-                          src={img}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-
-                      {/* Heart icon + Hover overlay */}
-                      <button
-                        onClick={(e) => toggleFavorite(e, product.id)}
-                        className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
-                        style={favorites.includes(product.id) ? { opacity: 1 } : {}}
-                        title={favorites.includes(product.id) ? 'Sevimlilərdən çıxar' : 'Sevimlilərə əlavə et'}
-                      >
-                        <svg className="w-4 h-4" fill={favorites.includes(product.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                            className={favorites.includes(product.id) ? 'text-red-500' : 'text-gray-600'}
-                          />
-                        </svg>
-                      </button>
-
-                      {/* Hover overlay with cart icon */}
-                      <div className="absolute inset-0 flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pb-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/products/${product.id}`);
-                          }}
-                          className="bg-white text-gray-900 text-xs font-semibold py-2.5 px-6 tracking-wide uppercase hover:bg-gray-900 hover:text-white transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                          </svg>
-                          Ətraflı Bax
-                        </button>
-                      </div>
-
-                      {/* Low stock badge */}
-                      {product.track_inventory && product.inventory_count <= 5 && product.inventory_count > 0 && (
-                        <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide">
-                          Son {product.inventory_count}
-                        </span>
-                      )}
-                      {product.track_inventory && product.inventory_count === 0 && (
-                        <span className="absolute top-2 left-2 bg-gray-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide">
-                          Stokda Yoxdur
-                        </span>
-                      )}
-
-                      {product.compare_at_price && parseFloat(product.compare_at_price) > parseFloat(product.price) && (
-                        <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide shadow-sm">
-                          -{Math.round(((parseFloat(product.compare_at_price) - parseFloat(product.price)) / parseFloat(product.compare_at_price)) * 100)}%
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900 leading-tight mb-1 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-900">
-                          {formatPrice(product.price)} ₼
-                        </span>
-                        {product.compare_at_price && parseFloat(product.compare_at_price) > parseFloat(product.price) && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-400 line-through">
-                              {formatPrice(product.compare_at_price)} ₼
-                            </span>
-                            <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1 rounded">
-                              -{Math.round(((parseFloat(product.compare_at_price) - parseFloat(product.price)) / parseFloat(product.compare_at_price)) * 100)}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {product.category && (
-                        <p className="text-xs text-gray-400 mt-0.5">{product.category}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {products.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  isFavorite={favorites.includes(product.id)} 
+                  onFavoriteToggle={toggleFavorite} 
+                />
+              ))}
             </div>
           )}
         </div>
