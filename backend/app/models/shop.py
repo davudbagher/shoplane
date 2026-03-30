@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -7,8 +7,16 @@ import enum
 
 class SubscriptionPlan(str, enum.Enum):
     """Subscription plan types."""
-    BASE = "base"      # 49 AZN/month
-    PRO = "pro"        # 79 AZN/month
+    STANDARD = "standard"  # 29 AZN/month
+    PRO = "pro"           # 39 AZN/month
+
+
+class SubscriptionStatus(str, enum.Enum):
+    """Status of the shop subscription."""
+    TRIAL = "trial"          # 14-day initial period
+    ACTIVE = "active"        # Paid and current
+    PAST_DUE = "past_due"    # Grace period or unpaid
+    EXPIRED = "expired"      # Handled by "Kill Switch"
 
 
 class Shop(Base):
@@ -23,18 +31,25 @@ class Shop(Base):
     slug = Column(String, unique=True, index=True, nullable=False)
     
     # Branding
-    description = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
     logo_url = Column(String, nullable=True)
     banner_url = Column(String, nullable=True)
+    primary_color = Column(String, default="#4f46e5")  # Merchant's brand color
     
     # Contact
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)
     address = Column(String, nullable=True)
+    whatsapp_number = Column(String, nullable=True) # For direct "Kitchen" communication
     
-    # Subscription
-    subscription_plan = Column(SQLEnum(SubscriptionPlan), default=SubscriptionPlan.BASE)
-    subscription_active = Column(Boolean, default=True)
+    # Onboarding
+    setup_token = Column(String, unique=True, index=True, nullable=True) # Single-use setup link
+    onboarding_completed = Column(Boolean, default=False)
+    
+    # Subscription & Billing
+    plan_type = Column(SQLEnum(SubscriptionPlan), default=SubscriptionPlan.STANDARD)
+    subscription_status = Column(SQLEnum(SubscriptionStatus), default=SubscriptionStatus.TRIAL)
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)
     subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
     
     # Custom Domain (Pro feature)

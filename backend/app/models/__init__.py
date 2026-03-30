@@ -8,6 +8,7 @@ from app.models.customer import Customer
 from app.models.order import Order, OrderStatus, PaymentMethod
 from app.models.order_item import OrderItem
 from app.models.coupon import Coupon
+from app.models.lead import Lead
 
 __all__ = [
     "User",
@@ -20,4 +21,5 @@ __all__ = [
     "PaymentMethod",
     "OrderItem",
     "Coupon",
+    "Lead",
 ]

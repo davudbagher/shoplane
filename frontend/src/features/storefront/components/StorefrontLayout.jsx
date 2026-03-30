@@ -194,7 +194,37 @@ export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
       </header>
 
       {/* ── Main Content ── */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 relative">
+        {children}
+
+        {/* ── EXPIRY OVERLAY (The Pressure) ── */}
+        {shop?.subscription_status === 'expired' && (
+          <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex items-center justify-center p-6 text-center">
+            <div className="max-w-md bg-white rounded-[40px] shadow-2xl border border-gray-100 p-10 md:p-14 animate-in fade-in zoom-in duration-500">
+              <div className="w-20 h-20 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-8">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-black text-gray-950 mb-4 uppercase tracking-tight italic">Xidmət Müvəqqəti Dayandırılıb</h2>
+              <p className="text-gray-600 mb-8 leading-relaxed font-medium">
+                Bu mağaza daxili texniki yenilənmə və ya abunəlik müddətinin bitməsi səbəbindən müvəqqəti olaraq sifariş qəbul etmir. 
+              </p>
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mağaza sahibi ilə əlaqə</p>
+                <div className="flex flex-col gap-2">
+                   <a href={`tel:${shop?.phone}`} className="text-lg font-bold text-gray-900 border-2 border-gray-100 rounded-2xl py-3 hover:bg-gray-50 transition-colors">
+                     {shop?.phone || 'Mağaza ilə əlaqə'}
+                   </a>
+                   <a href="https://1line.az" className="text-sm font-semibold text-primary-600 hover:underline">
+                     Öz mağazanızı yaradın — 1line.az
+                   </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* ── Footer ── */}
       <footer className="bg-gray-950 text-gray-400 mt-16">

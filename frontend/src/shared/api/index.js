@@ -15,5 +15,9 @@ export { adminApi } from './admin';
 // Storefront API (customer-facing shop queries)
 export { storefrontApi } from './storefront';
 
+// Super Admin API (Kitchen - platform management)
+export { superAdminApi } from './superAdmin';
+
+
 // Note: Old API files (shops.js, products.js, orders.js) have been
 // consolidated into admin.js for better maintainability and consistency

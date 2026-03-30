@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload, admin_coupons
+from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload, admin_coupons, super_admin
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -57,6 +57,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(super_admin.router, prefix="/admin", tags=["Platform Admin - Kitchen"])
 app.include_router(admin_shops.router, prefix="/admin/shops", tags=["Admin - Shops"])
 
 # ✅ Products router with shop_id in the prefix

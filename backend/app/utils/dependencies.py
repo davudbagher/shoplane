@@ -6,9 +6,10 @@ from jose import JWTError, jwt
 import logging
 
 from app.database import get_db
-from app.models.shop import Shop
+from app.models.shop import Shop, SubscriptionStatus
 from app.models.user import User
 from app.config import settings
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -85,16 +86,25 @@ def get_current_shop(
         )
     
     # Query database for shop
-    shop = db.query(Shop).filter(
-        Shop.subdomain == subdomain,
-        Shop.is_active == True
-    ).first()
+    # We include inactive/expired shops here so the storefront can render the "pressure" overlay
+    shop = db.query(Shop).filter(Shop.subdomain == subdomain).first()
     
     if not shop:
         logger.warning("Shop not found in database: %s", subdomain)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Shop '{subdomain}' not found or inactive"
+            detail=f"Shop '{subdomain}' not found"
+        )
+    
+    # Custom Domain Lock: If it's a Standard plan but accessing via custom domain, redirect
+    # or just log it for now. The plan says redirect to .1line.az
+    # This logic is best handled early.
+    
+    # Check for hard "is_active" flag (manual kill by platform admin)
+    if not shop.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Shop is suspended by platform administrator"
         )
     
     logger.debug("Found shop: %s (ID: %d)", shop.name, shop.id)
@@ -121,4 +131,11 @@ def verify_shop_owner(
             detail="Shop not found"
         )
     
+    # Kill Switch for Admin: Block access if expired
+    if shop.subscription_status == SubscriptionStatus.EXPIRED:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Subscription expired. Please pay to unlock your dashboard."
+        )
+        
     return shop

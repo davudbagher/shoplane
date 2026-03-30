@@ -17,12 +17,14 @@ import { CheckoutPage } from './features/storefront/pages/CheckoutPage';
 import { OrderConfirmationPage } from './features/storefront/pages/OrderConfirmationPage';
 import { FavoritesPage } from './features/storefront/pages/FavoritesPage';
 import { LandingPage } from './features/landing/pages/LandingPage';
+import { PlatformDashboard } from './features/platform/pages/PlatformDashboard';
 import { ProtectedRoute } from "./shared/components";
 import { getShopSubdomain } from "./shared/api/storefront";
 
 function App() {
   // Detect if we're on admin subdomain or path
   const isAdminRoute = window.location.pathname.startsWith('/admin') ||
+    window.location.pathname.startsWith('/kitchen') ||
     window.location.pathname.startsWith('/login') ||
     window.location.pathname.startsWith('/register');
 
@@ -42,6 +44,16 @@ function App() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/favorites" element={<FavoritesPage />} />
       <Route path="/orders/:orderNumber" element={<OrderConfirmationPage />} />
+
+      {/* ===== PLATFORM ADMIN (The Kitchen) ===== */}
+      <Route
+        path="/kitchen"
+        element={
+          <ProtectedRoute>
+            <PlatformDashboard />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ===== ADMIN ROUTES (Protected - Shop Owner) ===== */}
       <Route

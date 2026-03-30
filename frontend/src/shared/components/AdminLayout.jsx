@@ -254,8 +254,59 @@ export const AdminLayout = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 custom-scrollbar relative">
           {children}
+
+          {/* ── EXPIRY BLOCKING POP-UP ── */}
+          {activeShop?.subscription_status === 'expired' && (
+            <div className="fixed inset-0 z-[100] bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-in zoom-in duration-300">
+                <div className="p-10 text-center">
+                  <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  
+                  <h2 className="text-3xl font-black text-gray-950 mb-4 tracking-tight uppercase">Ödəniş Tələb Olunur</h2>
+                  <p className="text-gray-600 mb-8 leading-relaxed font-medium">
+                    Abunəlik müddətiniz başa çatıb. Mağaza idarəsini davam etdirmək üçün abunəliyinizi yeniləməyiniz xahiş olunur. 
+                  </p>
+                  
+                  <div className="bg-gray-50 rounded-2xl p-6 text-left mb-8 border border-gray-100 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-sm">
+                      🇦🇿
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Dəstək və Ödəniş</p>
+                      <p className="text-lg font-black text-gray-900">+994 51 513 13 41</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <a 
+                      href="https://wa.me/994515131341" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    >
+                      <span>WhatsApp ilə əlaqə</span>
+                    </a>
+                    <button 
+                      onClick={handleLogout}
+                      className="text-gray-500 font-bold text-sm hover:text-gray-900 transition-colors py-2"
+                    >
+                      Çıxış et
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 px-8 py-4 border-t border-gray-100 text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">
+                  1line.az — Şəffaf və Sürətli E-Ticarət
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

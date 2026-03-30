@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional
 from datetime import datetime
-from app.models.shop import SubscriptionPlan
+from app.models.shop import SubscriptionPlan, SubscriptionStatus
 import re
 
 
@@ -12,6 +12,8 @@ class ShopBase(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = None
     address: Optional[str] = Field(None, max_length=200)
+    whatsapp_number: Optional[str] = None
+    primary_color: str = "#4f46e5"
 
 
 class ShopCreate(ShopBase):
@@ -46,10 +48,16 @@ class ShopUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = None
     address: Optional[str] = Field(None, max_length=200)
+    whatsapp_number: Optional[str] = None
+    primary_color: Optional[str] = None
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
     allow_cod: Optional[bool] = None
     allow_online_payment: Optional[bool] = None
+    plan_type: Optional[SubscriptionPlan] = None
+    subscription_status: Optional[SubscriptionStatus] = None
+    subscription_expires_at: Optional[datetime] = None
+    trial_ends_at: Optional[datetime] = None
 
 
 class ShopResponse(ShopBase):
@@ -61,8 +69,12 @@ class ShopResponse(ShopBase):
     slug: str
     logo_url: Optional[str]
     banner_url: Optional[str]
-    subscription_plan: SubscriptionPlan
-    subscription_active: bool
+    plan_type: SubscriptionPlan
+    subscription_status: SubscriptionStatus
+    trial_ends_at: Optional[datetime]
+    subscription_expires_at: Optional[datetime]
+    setup_token: Optional[str]
+    onboarding_completed: bool
     custom_domain: Optional[str]
     allow_cod: bool
     allow_online_payment: bool
@@ -84,5 +96,7 @@ class ShopPublicResponse(BaseModel):
     phone: Optional[str]
     email: Optional[str]
     address: Optional[str]
+    primary_color: str
+    subscription_status: SubscriptionStatus
     allow_cod: bool
     allow_online_payment: bool
