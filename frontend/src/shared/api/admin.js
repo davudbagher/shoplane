@@ -147,4 +147,16 @@ export const adminApi = {
     const response = await adminClient.delete(`/admin/shops/${shopId}/coupons/${couponId}`);
     return response.data;
   },
+
+  // ===== PAYMENT SETTINGS API =====
+
+  getPaymentSettings: async (shopId) => {
+    const response = await adminClient.get(`/admin/shops/${shopId}/payment-settings`);
+    return response.data;
+  },
+
+  updatePaymentSettings: async (shopId, paymentSettings) => {
+    const response = await adminClient.put(`/admin/shops/${shopId}/payment-settings`, paymentSettings);
+    return response.data;
+  },
 };

@@ -60,7 +60,21 @@ class Shop(Base):
     is_active = Column(Boolean, default=True)
     allow_cod = Column(Boolean, default=True)  # Cash on delivery
     allow_online_payment = Column(Boolean, default=False)  # MilliKart/BirBank/Pasha
-    
+
+    # MilliKart Payment Integration (Shop Owner's Own Account)
+    # Shop owners connect their own MilliKart account to receive payments directly
+    millikart_enabled = Column(Boolean, default=False)  # Whether online payment via MilliKart is enabled
+    millikart_iban = Column(String, nullable=True)  # Shop owner's IBAN for receiving payments
+    millikart_account_info = Column(Text, nullable=True)  # MilliKart account details (JSON or text)
+    millikart_payment_link = Column(String, nullable=True)  # Direct payment link for checkout
+
+    # Credentials & Setup (Stored for Kitchen admin)
+    setup_token = Column(String, unique=True, index=True, nullable=True)  # Token for password setup
+    temporary_password = Column(String, nullable=True)  # Initial temp password (stored for admin reference)
+    credentials_sent = Column(Boolean, default=False)  # Track if credentials were sent to merchant
+    credentials_sent_at = Column(DateTime(timezone=True), nullable=True)  # When credentials were sent
+    seo_setup_completed = Column(Boolean, default=False)  # Track if SEO was configured
+
     # Owner
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     

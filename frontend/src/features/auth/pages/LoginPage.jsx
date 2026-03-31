@@ -45,18 +45,22 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
-    
+
     const result = await login(formData.email, formData.password);
-    
+
     setLoading(false);
-    
+
     if (result.success) {
-      // Redirect to admin dashboard
-      navigate('/admin/dashboard');
+      // Redirect superusers to Kitchen, regular users to admin dashboard
+      if (result.data.user.is_superuser) {
+        navigate('/kitchen');
+      } else {
+        navigate('/admin/dashboard');
+      }
     }
   };
 
@@ -146,6 +150,9 @@ export const LoginPage = () => {
           </p>
           <p className="text-xs text-warning-700">
             Backend serveri işə salın: <code className="bg-warning-100 px-1 py-0.5 rounded">cd ~/shoplane/backend && uvicorn app.main:app --reload</code>
+          </p>
+          <p className="text-xs text-warning-700 mt-2">
+            👑 Superuser girişi: <code className="bg-warning-100 px-1 py-0.5 rounded">{import.meta.env.VITE_ADMIN_EMAIL || 'davudbaghir@gmail.com'}</code>
           </p>
         </div>
       </div>

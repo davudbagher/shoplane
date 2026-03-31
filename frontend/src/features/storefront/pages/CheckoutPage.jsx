@@ -26,7 +26,7 @@ export const CheckoutPage = () => {
     shipping_postal_code: "",
     delivery_notes: "",
     pickup_point: "", // New field for hardcoded pick up spots
-    payment_method: "cash_on_delivery",
+    payment_method: "cash_on_delivery", // Default to COD
   });
 
   const [loading, setLoading] = useState(false);
@@ -110,7 +110,7 @@ export const CheckoutPage = () => {
     setLoading(true);
     try {
       // Overwrite address field if pickup to avoid DB confusion
-      const finalAddress = deliveryType === 'pickup' 
+      const finalAddress = deliveryType === 'pickup'
         ? `Təhvil Məntəqəsi: ${formData.pickup_point}`
         : formData.shipping_address.trim();
 
@@ -123,7 +123,7 @@ export const CheckoutPage = () => {
         shipping_address: finalAddress,
         shipping_postal_code: formData.shipping_postal_code.trim() || null,
         delivery_notes: formData.delivery_notes.trim() || null,
-        payment_method: "cash_on_delivery",
+        payment_method: formData.payment_method,
         items: cartItems.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
         discount_code: appliedCoupon || null,
       };
@@ -133,7 +133,16 @@ export const CheckoutPage = () => {
       localStorage.removeItem('cart_coupon');
       localStorage.setItem("last_order_phone", formData.customer_phone.trim());
       window.dispatchEvent(new Event("cartUpdated"));
-      navigate(`/orders/${order.order_number}`, { state: { order } });
+
+      // If online payment selected and shop has MilliKart configured, redirect to payment link
+      if (formData.payment_method === 'millikart' && shop?.millikart_enabled && shop.millikart_payment_link) {
+        // Redirect to shop's MilliKart payment page with order amount
+        const paymentUrl = `${shop.millikart_payment_link}?amount=${finalTotal}&order=${order.order_number}`;
+        window.location.href = paymentUrl; // Redirect to external payment gateway
+      } else {
+        // Navigate to order confirmation for COD or if no payment link
+        navigate(`/orders/${order.order_number}`, { state: { order } });
+      }
     } catch (err) {
       alert(err.response?.data?.detail || "Sifariş zamanı xəta baş verdi.");
     } finally {
@@ -338,12 +347,47 @@ export const CheckoutPage = () => {
               </div>
 
               {/* Sticky Static support */}
-              <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-2 border border-gray-100">
-                <span className="text-xl">💵</span>
-                <div>
-                  <p className="text-xs font-bold text-gray-900">Nağd Ödəniş (Qapıda)</p>
-                  <p className="text-[10px] text-gray-500">Məhsulu alarkən kuryerə ödəniş ediləcək.</p>
-                </div>
+              <div className="space-y-3">
+                {shop?.millikart_enabled && shop?.allow_online_payment ? (
+                  <>
+                    <label className="flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all bg-white hover:border-gray-300">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="millikart"
+                        checked={formData.payment_method === 'millikart'}
+                        onChange={handleInputChange}
+                        className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-gray-900">💳 Onlayn Ödəniş (MilliKart)</p>
+                        <p className="text-[10px] text-gray-500">Kartla təhlükəsiz ödəniş. Pul birbaşa satıcıya köçürülür.</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all bg-white hover:border-gray-300">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="cash_on_delivery"
+                        checked={formData.payment_method === 'cash_on_delivery'}
+                        onChange={handleInputChange}
+                        className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-gray-900">💵 Nağd Ödəniş (Qapıda)</p>
+                        <p className="text-[10px] text-gray-500">Məhsulu alarkən kuryerə ödəniş ediləcək.</p>
+                      </div>
+                    </label>
+                  </>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-2 border border-gray-100">
+                    <span className="text-xl">💵</span>
+                    <div>
+                      <p className="text-xs font-bold text-gray-900">Nağd Ödəniş (Qapıda)</p>
+                      <p className="text-[10px] text-gray-500">Məhsulu alarkən kuryerə ödəniş ediləcək.</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

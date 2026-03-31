@@ -4,7 +4,7 @@ from typing import List
 from app.database import get_db
 from app.models.user import User
 from app.models.shop import Shop, SubscriptionPlan
-from app.schemas.shop import ShopCreate, ShopUpdate, ShopResponse
+from app.schemas.shop import ShopCreate, ShopUpdate, ShopResponse, MilliKartSettings
 from app.utils.dependencies import get_current_user, verify_shop_owner
 
 router = APIRouter()
@@ -140,11 +140,71 @@ def deactivate_shop(
 ):
     """
     Deactivate shop (soft delete).
-    
+
     Shop becomes inaccessible to customers but data is preserved.
     Owner can reactivate by contacting support.
     """
     shop.is_active = False
     db.commit()
-    
+
     return None
+
+
+@router.get("/{shop_id}/payment-settings", response_model=MilliKartSettings)
+def get_payment_settings(
+    shop_id: int,
+    shop: Shop = Depends(verify_shop_owner),
+    db: Session = Depends(get_db)
+):
+    """
+    Get payment gateway settings for the shop.
+
+    Returns MilliKart configuration (IBAN, payment link, etc.)
+    Shop owners use this to configure their own payment gateway account.
+    """
+    return {
+        "millikart_enabled": shop.millikart_enabled,
+        "millikart_iban": shop.millikart_iban,
+        "millikart_account_info": shop.millikart_account_info,
+        "millikart_payment_link": shop.millikart_payment_link
+    }
+
+
+@router.put("/{shop_id}/payment-settings", response_model=ShopResponse)
+def update_payment_settings(
+    shop_id: int,
+    payment_settings: MilliKartSettings,
+    shop: Shop = Depends(verify_shop_owner),
+    db: Session = Depends(get_db)
+):
+    """
+    Update payment gateway settings.
+
+    Shop owners connect their own MilliKart account by providing:
+    - IBAN (for receiving payments directly to their bank account)
+    - Payment link (generated from MilliKart dashboard for checkout integration)
+
+    This is a ONE-LINK integration:
+    1. Shop owner registers at MilliKart merchant portal
+    2. Gets their payment link and IBAN
+    3. Pastes them here
+    4. Customers pay directly to shop owner's account at checkout
+
+    Platform (1line.az) does NOT handle any money - just charges monthly subscription.
+    """
+    # Update MilliKart settings
+    shop.millikart_enabled = payment_settings.millikart_enabled
+    shop.millikart_iban = payment_settings.millikart_iban
+    shop.millikart_account_info = payment_settings.millikart_account_info
+    shop.millikart_payment_link = payment_settings.millikart_payment_link
+
+    # Auto-enable online payment if MilliKart is configured and enabled
+    if payment_settings.millikart_enabled and payment_settings.millikart_payment_link:
+        shop.allow_online_payment = True
+    elif not payment_settings.millikart_enabled:
+        shop.allow_online_payment = False
+
+    db.commit()
+    db.refresh(shop)
+
+    return shop

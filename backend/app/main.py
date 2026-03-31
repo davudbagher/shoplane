@@ -40,14 +40,21 @@ app = FastAPI(
 )
 
 # CORS Configuration (Allow React frontend)
+# For development: allow all localhost variants
+# For production: allow *.1line.az
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Local React dev server
-        "http://localhost:5173",  # Local Vite dev server
-        "http://localhost:5174",  # Local Vite dev server (alternate port)
-        "https://*.1line.az",     # Production subdomains
-        "https://1line.az",       # Main domain
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://landing.localhost:5173",
+        "http://admin.localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "https://*.1line.az",
+        "https://1line.az",
     ],
     allow_credentials=True,
     allow_methods=["*"],

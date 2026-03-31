@@ -1,31 +1,18 @@
 import { useState } from 'react';
-import { Button } from '../../../shared/components/Button';
-import { Input } from '../../../shared/components/Input';
-import { superAdminApi } from '../../../shared/api';
+import { OnboardingModal } from '../../platform/components/OnboardingModal';
 
 export const LeadForm = () => {
-  const [formData, setFormData] = useState({
-    full_name: '',
-    whatsapp: '',
-    shop_name: '',
-    category: ''
-  });
+  const [showModal, setShowModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      await superAdminApi.submitLead(formData);
-      setSubmitted(true);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Müraciət zamanı xəta baş verdi');
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = (e) => {
+    e?.preventDefault();
+    setShowModal(true);
+  };
+
+  const handleSuccess = () => {
+    setSubmitted(true);
+    setShowModal(false);
   };
 
   if (submitted) {
@@ -37,60 +24,63 @@ export const LeadForm = () => {
           </svg>
         </div>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Təşəkkür edirik!</h3>
-        <p className="text-gray-600">
-          Müraciətiniz qəbul edildi. Tezliklə WhatsApp vasitəsilə sizinlə əlaqə saxlayacağıq.
+        <p className="text-gray-600 mb-4">
+          Müraciətiniz qəbul edildi. Komandamız 48 saat ərzində sizinlə WhatsApp və ya zəng vasitəsilə əlaqə saxlayacaq.
         </p>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+          <p className="text-sm text-blue-800">
+            📞 Əlaqə: <strong>+994 50 123 45 67</strong>
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">Mağaza üçün müraciət et</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Ad və Soyad"
-          placeholder="Məs. Əli Məmmədov"
-          value={formData.full_name}
-          onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-          required
-        />
-        <Input
-          label="WhatsApp nömrəsi"
-          placeholder="+994 -- --- -- --"
-          value={formData.whatsapp}
-          onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
-          required
-        />
-        <Input
-          label="Gözlənilən Mağaza Adı"
-          placeholder="Məs. My Trendy Shop"
-          value={formData.shop_name}
-          onChange={(e) => setFormData({...formData, shop_name: e.target.value})}
-          required
-        />
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Kateqoriya</label>
-          <select 
-            className="w-full h-12 rounded-xl border-gray-200 focus:border-primary-500 focus:ring-primary-500 transition-shadow bg-gray-50 border px-4"
-            value={formData.category}
-            onChange={(e) => setFormData({...formData, category: e.target.value})}
-            required
+    <>
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">Mağaza üçün müraciət et</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200">
+            <p className="text-sm text-gray-700 mb-3">
+              🎯 3 addımda onlayn mağazanızı yaradaq!
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">1</span>
+                Məlumatlar
+              </span>
+              <span>→</span>
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">2</span>
+                Marka
+              </span>
+              <span>→</span>
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">3</span>
+                Təsdiq
+              </span>
+            </div>
+          </div>
+          
+          <button
+            type="submit"
+            className="w-full h-14 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-bold text-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
           >
-            <option value="">Seçin...</option>
-            <option value="clothing">Geyim</option>
-            <option value="electronics">Elektronika</option>
-            <option value="home">Ev və Bağ</option>
-            <option value="other">Digər</option>
-          </select>
-        </div>
-        <Button variant="primary" className="w-full h-14 text-lg mt-6" type="submit" loading={loading}>
-          Müraciət et
-        </Button>
-        <p className="text-center text-xs text-gray-400 mt-4">
-          Müraciət edərək şərtlərimizlə razılaşırsınız.
-        </p>
-      </form>
-    </div>
+            🚀 Başlayaq
+          </button>
+          
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Müraciət edərək şərtlərimizlə razılaşırsınız.
+          </p>
+        </form>
+      </div>
+
+      <OnboardingModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmitSuccess={handleSuccess}
+      />
+    </>
   );
 };

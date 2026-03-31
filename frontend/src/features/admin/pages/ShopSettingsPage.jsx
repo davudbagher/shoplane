@@ -7,13 +7,21 @@ import { Button } from '../../../shared/components/Button';
 export const ShopSettingsPage = () => {
   const { shopId } = useParams();
   const navigate = useNavigate();
-  
+
   const [shop, setShop] = useState({
     name: '',
     description: '',
     subdomain: '',
     custom_domain: '',
-    logo_url: ''
+    logo_url: '',
+    allow_cod: true,
+    allow_online_payment: false
+  });
+  const [paymentSettings, setPaymentSettings] = useState({
+    millikart_enabled: false,
+    millikart_iban: '',
+    millikart_account_info: '',
+    millikart_payment_link: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,7 +42,15 @@ export const ShopSettingsPage = () => {
         description: data.description || '',
         subdomain: data.subdomain || '',
         custom_domain: data.custom_domain || '',
-        logo_url: data.logo_url || ''
+        logo_url: data.logo_url || '',
+        allow_cod: data.allow_cod ?? true,
+        allow_online_payment: data.allow_online_payment ?? false
+      });
+      setPaymentSettings({
+        millikart_enabled: data.millikart_enabled ?? false,
+        millikart_iban: data.millikart_iban || '',
+        millikart_account_info: data.millikart_account_info || '',
+        millikart_payment_link: data.millikart_payment_link || ''
       });
     } catch (err) {
       console.error('Failed to load shop settings:', err);
@@ -47,6 +63,11 @@ export const ShopSettingsPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setShop(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePaymentChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setPaymentSettings(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleLogoUpload = async (e) => {
@@ -69,9 +90,14 @@ export const ShopSettingsPage = () => {
     setSaving(true);
     setError(null);
     setSuccess(false);
-    
+
     try {
+      // Update general shop settings
       await adminApi.updateShop(shopId, shop);
+      
+      // Update payment settings
+      await adminApi.updatePaymentSettings(shopId, paymentSettings);
+      
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -114,7 +140,7 @@ export const ShopSettingsPage = () => {
           {/* General Settings */}
           <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-3">Ümumi Məlumatlar</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Mağaza Adı</label>
@@ -159,7 +185,7 @@ export const ShopSettingsPage = () => {
           {/* Logo Settings */}
           <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-3">Mağaza Loqosu (Logo)</h2>
-            
+
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Loqo Şəkli</label>
               <div className="flex items-center gap-4">
@@ -177,7 +203,7 @@ export const ShopSettingsPage = () => {
                     🏪
                   </div>
                 )}
-                
+
                 <div className="flex flex-col gap-1">
                   <label className={`cursor-pointer px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors inline-block text-center ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                     <input type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleLogoUpload} disabled={uploading} />
@@ -189,11 +215,96 @@ export const ShopSettingsPage = () => {
             </div>
           </div>
 
+          {/* Payment Settings */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-3">💳 Ödəniş Parametrləri (MilliKart)</h2>
+            
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h3 className="text-sm font-bold text-blue-900 mb-2">🔗 Bir Link İnteqrasiyası</h3>
+              <p className="text-xs text-blue-700 mb-3">
+                MilliKart-da hesab açın və ödəniş linkinizi əldə edin. Müştərilər ödəniş etdikdə, pul birbaşa SİZİN hesabınıza köçürülür.
+                1line.az heç bir komissiya tutmur - yalnız aylıq abunə haqqı.
+              </p>
+              <a 
+                href="https://millikart.az/merchant-registration" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900 underline"
+              >
+                MilliKart Tacir Qeydiyyatı →
+              </a>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-bold text-gray-700">MilliKart Ödənişlərini Aktivləşdir</label>
+                  <p className="text-xs text-gray-500">Müştərilərə onlayn ödəniş imkanı verin</p>
+                </div>
+                <input
+                  type="checkbox"
+                  name="millikart_enabled"
+                  checked={paymentSettings.millikart_enabled}
+                  onChange={handlePaymentChange}
+                  className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+              </div>
+
+              {paymentSettings.millikart_enabled && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      IBAN (Ödənişləri qəbul etmək üçün)
+                    </label>
+                    <input
+                      type="text"
+                      name="millikart_iban"
+                      value={paymentSettings.millikart_iban}
+                      onChange={handlePaymentChange}
+                      placeholder="AZ20010000000000000000000000"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-black focus:border-black text-sm font-mono"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Bank hesabınızın IBAN kodu (AZ + 24 rəqəm)</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Ödəniş Linki (Payment Link)
+                    </label>
+                    <input
+                      type="url"
+                      name="millikart_payment_link"
+                      value={paymentSettings.millikart_payment_link}
+                      onChange={handlePaymentChange}
+                      placeholder="https://pay.millikart.az/merchant/..."
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-black focus:border-black text-sm font-mono"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">MilliKart kabinetinizdən aldığınız ödəniş linki</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Hesab Məlumatları (İstəyə bağlı)
+                    </label>
+                    <textarea
+                      name="millikart_account_info"
+                      value={paymentSettings.millikart_account_info}
+                      onChange={handlePaymentChange}
+                      rows={2}
+                      placeholder="MilliKart hesab ID və ya digər məlumatlar..."
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-black focus:border-black text-sm"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Domain Settings */}
           <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-3">Xüsusi Domen (Custom Domain)</h2>
             <p className="text-xs text-gray-400">Öz domeninizdən istifadə etmək üçün DNS parametrlərini tənzimləməlisiniz.</p>
-            
+
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Domen Adı</label>
               <input

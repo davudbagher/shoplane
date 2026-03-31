@@ -4,6 +4,8 @@ import { storefrontApi } from '../../../shared/api';
 
 export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
   const [shop, setShop] = useState(null);
+  const [shopLoading, setShopLoading] = useState(true);
+  const [shopError, setShopError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [favCount, setFavCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -39,10 +41,16 @@ export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
 
   const loadShop = async () => {
     try {
+      setShopLoading(true);
+      setShopError(null);
       const shopData = await storefrontApi.getShop();
+      console.log('✅ Shop data loaded:', shopData);
       setShop(shopData);
     } catch (err) {
-      // Shop load failed silently
+      console.error('❌ Failed to load shop:', err);
+      setShopError(err.response?.status === 404 ? 'not_found' : 'error');
+    } finally {
+      setShopLoading(false);
     }
   };
 
@@ -100,19 +108,44 @@ export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
 
           {/* Logo - Centered Absolutely */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              {shop?.logo_url && shop.logo_url.trim() !== '' && (
-                <img
-                  src={shop.logo_url}
-                  alt=""
-                  className="h-8 w-8 rounded-full object-cover border border-gray-100 shadow-sm"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              )}
-              <span className="text-xl md:text-2xl font-black tracking-widest text-gray-950 uppercase group-hover:opacity-75 transition-opacity font-sans">
-                {shop?.name || 'Mağaza'}
-              </span>
-            </Link>
+            {shopLoading ? (
+              // Loading skeleton
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ) : shopError ? (
+              // Error state
+              <div className="text-center">
+                <p className="text-sm font-bold text-red-600">
+                  {shopError === 'not_found' ? '🏪 Mağaza tapılmadı' : '⚠️ Xəta baş verdi'}
+                </p>
+              </div>
+            ) : (
+              // Shop loaded - show logo and name
+              <Link to="/" className="flex items-center gap-2.5 group">
+                {shop?.logo_url && shop.logo_url.trim() !== '' ? (
+                  <img
+                    src={shop.logo_url}
+                    alt={shop.name}
+                    className="h-8 w-8 rounded-full object-cover border border-gray-100 shadow-sm"
+                    onError={(e) => { 
+                      e.target.style.display = 'none';
+                      // Show fallback icon when image fails
+                      const fallback = document.createElement('span');
+                      fallback.textContent = '🏪';
+                      fallback.className = 'text-lg';
+                      e.target.parentNode.insertBefore(fallback, e.target.nextSibling);
+                    }}
+                  />
+                ) : (
+                  <span className="text-lg">🏪</span>
+                )}
+                <span className="text-xl md:text-2xl font-black tracking-widest text-gray-950 uppercase group-hover:opacity-75 transition-opacity font-sans">
+                  {shop?.name || 'Mağaza'}
+                </span>
+              </Link>
+            )}
           </div>
 
           {/* Right Icons Action Tray */}
@@ -231,38 +264,62 @@ export const StorefrontLayout = ({ children, onSearch, searchValue = '' }) => {
         <div className="max-w-screen-xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <p className="text-white font-bold text-lg uppercase tracking-wide mb-3">
-              {shop?.name || 'Mağaza'}
-            </p>
-            <p className="text-sm leading-relaxed">
-              {shop?.description || 'Azərbaycanda keyfiyyətli məhsullar.'}
-            </p>
+            {shopLoading ? (
+              <div className="h-6 w-40 bg-gray-800 rounded animate-pulse mb-3" />
+            ) : (
+              <>
+                <p className="text-white font-bold text-lg uppercase tracking-wide mb-3">
+                  {shop?.name || 'Mağaza'}
+                </p>
+                <p className="text-sm leading-relaxed">
+                  {shop?.description || 'Azərbaycanda keyfiyyətli məhsullar.'}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Contact */}
           <div>
             <p className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Əlaqə</p>
-            <div className="space-y-2 text-sm">
-              {shop?.phone && <a href={`tel:${shop.phone}`} className="flex items-center gap-2 hover:text-white transition-colors">📞 {shop.phone}</a>}
-              {shop?.email && <a href={`mailto:${shop.email}`} className="flex items-center gap-2 hover:text-white transition-colors">✉️ {shop.email}</a>}
-              {shop?.address && <p className="flex items-center gap-2">📍 {shop.address}</p>}
-              {!shop?.phone && !shop?.email && !shop?.address && <p className="text-gray-600">—</p>}
-            </div>
+            {shopLoading ? (
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-gray-800 rounded animate-pulse" />
+                <div className="h-4 w-40 bg-gray-800 rounded animate-pulse" />
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {shop?.phone && <a href={`tel:${shop.phone}`} className="flex items-center gap-2 hover:text-white transition-colors">📞 {shop.phone}</a>}
+                {shop?.email && <a href={`mailto:${shop.email}`} className="flex items-center gap-2 hover:text-white transition-colors">✉️ {shop.email}</a>}
+                {shop?.address && <p className="flex items-center gap-2">📍 {shop.address}</p>}
+                {!shop?.phone && !shop?.email && !shop?.address && <p className="text-gray-600">—</p>}
+              </div>
+            )}
           </div>
 
           {/* Payment */}
           <div>
             <p className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Ödəniş</p>
-            <div className="flex flex-wrap gap-2">
-              {shop?.allow_cod && <span className="px-3 py-1 border border-gray-700 text-xs rounded text-gray-300">💵 Qapıda Ödəniş</span>}
-              {shop?.allow_online_payment && <span className="px-3 py-1 border border-gray-700 text-xs rounded text-gray-300">💳 Kart</span>}
-            </div>
+            {shopLoading ? (
+              <div className="flex gap-2">
+                <div className="h-6 w-20 bg-gray-800 rounded animate-pulse" />
+                <div className="h-6 w-16 bg-gray-800 rounded animate-pulse" />
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {shop?.allow_cod && <span className="px-3 py-1 border border-gray-700 text-xs rounded text-gray-300">💵 Qapıda Ödəniş</span>}
+                {shop?.allow_online_payment && <span className="px-3 py-1 border border-gray-700 text-xs rounded text-gray-300">💳 Kart</span>}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="border-t border-gray-800 py-4">
           <div className="max-w-screen-xl mx-auto px-6 flex items-center justify-between text-xs text-gray-600">
-            <span>© {new Date().getFullYear()} {shop?.name || 'Mağaza'}</span>
+            {shopLoading ? (
+              <div className="h-4 w-32 bg-gray-800 rounded animate-pulse" />
+            ) : (
+              <span>© {new Date().getFullYear()} {shop?.name || 'Mağaza'}</span>
+            )}
             <a href="https://1line.az" className="hover:text-gray-400 transition-colors">Powered by 1line.az 🇦🇿</a>
           </div>
         </div>

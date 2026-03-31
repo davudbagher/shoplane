@@ -20,9 +20,9 @@ Transform Instagram/WhatsApp sellers into professional online shops with subdoma
 - **Checkout** with Azerbaijan shipping addresses (Bakı, Gəncə, districts)
 - **Multiple payment methods**:
   - 💵 Cash on Delivery (COD)
-  - 💳 MilliKart (local card payment)
-  - 📱 BirBank (mobile banking)
-  - 💰 Pasha Pay (digital wallet)
+  - 💳 MilliKart (one-link integration - shop owner's own account)
+  - 📱 BirBank (coming soon)
+  - 💰 Pasha Pay (coming soon)
 - **Order tracking** with phone verification
 
 ---
@@ -113,6 +113,8 @@ http://localhost:8000/docs
 - `GET /admin/shops` - List user's shops
 - `GET /admin/shops/{id}` - Get shop details
 - `PUT /admin/shops/{id}` - Update shop
+- `GET /admin/shops/{id}/payment-settings` - Get payment settings
+- `PUT /admin/shops/{id}/payment-settings` - Update payment settings (MilliKart)
 - `POST /admin/shops/{id}/upgrade` - Upgrade to PRO plan
 - `DELETE /admin/shops/{id}` - Deactivate shop
 
@@ -173,6 +175,29 @@ http://localhost:8000/docs
 
 ---
 
+## 💳 MilliKart Payment Integration
+
+Shop owners can connect their own MilliKart merchant account to receive online payments directly.
+
+### How It Works
+
+1. **Shop owner registers** at MilliKart merchant portal
+2. **Gets payment link** from MilliKart dashboard
+3. **Configures in settings** → Payment receives directly to their IBAN
+
+### Key Benefits
+
+- ✅ **No money handling** by platform (1line.az)
+- ✅ **Direct transfers** to shop owner's bank account
+- ✅ **One-link setup** - no complex API integration
+- ✅ **Platform revenue** from monthly subscriptions only
+
+### Setup Guide
+
+See [`MILLIKART_INTEGRATION.md`](./MILLIKART_INTEGRATION.md) for complete documentation.
+
+---
+
 ## 🚀 Deployment
 
 ### Production Checklist
@@ -195,16 +220,18 @@ http://localhost:8000/docs
 - [x] Shop creation with subdomain
 - [x] Product management
 - [x] Order management
-- [x] Azerbaijan payment methods
+- [x] Cash on Delivery (COD) payment
+- [x] MilliKart one-link integration
 - [x] Mobile-optimized APIs
+- [x] Coupon system
 
 ### Phase 2 (Next)
-- [ ] Frontend (React storefront)
 - [ ] Image upload to S3/Cloudinary
 - [ ] Email notifications (order confirmations)
-- [ ] SMS notifications via local provider
-- [ ] MilliKart payment integration
+- [ ] SMS notifications via Bako SMS
 - [ ] BirBank payment integration
+- [ ] Pasha Pay payment integration
+- [ ] Automated testing suite
 
 ### Phase 3 (Marketplace)
 - [ ] Cross-shop product search
