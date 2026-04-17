@@ -92,11 +92,16 @@ def update_shop(
     - Branding (logo, banner)
     - Payment settings (allow_cod, allow_online_payment)
     """
-    # Update fields if provided
-    update_data = shop_data.model_dump(exclude_unset=True)
-    
-    for field, value in update_data.items():
-        setattr(shop, field, value)
+    # Explicit whitelist — subscription/ownership fields must not be user-settable
+    UPDATABLE_FIELDS = {
+        'name', 'description', 'phone', 'email', 'address', 'whatsapp_number',
+        'primary_color', 'logo_url', 'banner_url', 'allow_cod', 'allow_online_payment',
+        'millikart_enabled', 'millikart_iban', 'millikart_payment_link',
+        'seo_setup_completed', 'onboarding_completed',
+    }
+    for field, value in shop_data.model_dump(exclude_unset=True).items():
+        if field in UPDATABLE_FIELDS:
+            setattr(shop, field, value)
     
     db.commit()
     db.refresh(shop)

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional
 from math import ceil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from app.database import get_db
 from app.models.user import User
@@ -143,13 +143,13 @@ def update_order_status(
     
     # Update timestamp based on new status
     if status_update.status == OrderStatus.CONFIRMED and not order.confirmed_at:
-        order.confirmed_at = datetime.utcnow()
-    
+        order.confirmed_at = datetime.now(timezone.utc)
+
     elif status_update.status == OrderStatus.SHIPPED and not order.shipped_at:
-        order.shipped_at = datetime.utcnow()
-    
+        order.shipped_at = datetime.now(timezone.utc)
+
     elif status_update.status == OrderStatus.DELIVERED and not order.delivered_at:
-        order.delivered_at = datetime.utcnow()
+        order.delivered_at = datetime.now(timezone.utc)
         
         # Mark payment as completed for COD
         if order.is_cod:
@@ -183,7 +183,7 @@ def get_order_statistics(
     This replaces Excel sheets and WhatsApp message counting!
     """
     # Date range
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     # Base query for period
     base_query = db.query(Order).filter(
@@ -266,7 +266,7 @@ def cancel_order(
     # Update status
     order.status = OrderStatus.CANCELLED
     order.payment_status = PaymentStatus.CANCELLED
-    order.cancelled_at = datetime.utcnow()
+    order.cancelled_at = datetime.now(timezone.utc)
     
     if reason:
         order.admin_notes = f"Cancellation reason: {reason}"

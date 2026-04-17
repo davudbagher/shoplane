@@ -84,8 +84,14 @@ def update_coupon(
     coupon = db.query(Coupon).filter(Coupon.id == coupon_id, Coupon.shop_id == shop_id).first()
     if not coupon:
         raise HTTPException(status_code=404, detail="Coupon not found")
+    # Explicit whitelist — usage_count must never be client-settable
+    UPDATABLE_FIELDS = {
+        'code', 'discount_type', 'discount_value', 'scope',
+        'applicable_product_ids', 'starts_at', 'ends_at', 'usage_limit', 'is_active',
+    }
     for field, value in coupon_data.dict(exclude_unset=True).items():
-        setattr(coupon, field, value)
+        if field in UPDATABLE_FIELDS:
+            setattr(coupon, field, value)
     db.commit()
     db.refresh(coupon)
     return coupon

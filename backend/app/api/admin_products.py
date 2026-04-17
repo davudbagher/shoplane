@@ -212,9 +212,16 @@ def update_product(
             detail="Product not found"
         )
     
-    # Update fields
+    # Explicit whitelist — prevents future schema additions from accidentally
+    # exposing internal fields like shop_id or owner_id to mass assignment
+    UPDATABLE_FIELDS = {
+        'name', 'description', 'price', 'compare_at_price', 'category',
+        'tags', 'inventory_count', 'track_inventory', 'allow_backorder',
+        'is_active', 'is_featured', 'is_new_arrival', 'images', 'variants',
+    }
     for field, value in product_data.dict(exclude_unset=True).items():
-        setattr(product, field, value)
+        if field in UPDATABLE_FIELDS:
+            setattr(product, field, value)
     
     db.commit()
     db.refresh(product)

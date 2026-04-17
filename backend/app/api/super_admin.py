@@ -318,10 +318,16 @@ def edit_shop(
     if not shop:
         raise HTTPException(status_code=404, detail="Shop not found")
     
-    # Update fields
-    update_data = shop_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        if hasattr(shop, field):
+    # Explicit whitelist — even super-admin edits are scoped to these fields
+    # to prevent accidental writes to internal fields (owner_id, id, etc.)
+    ADMIN_UPDATABLE_FIELDS = {
+        'name', 'description', 'phone', 'email', 'address', 'whatsapp_number',
+        'logo_url', 'banner_url', 'primary_color', 'allow_cod', 'allow_online_payment',
+        'millikart_enabled', 'millikart_iban', 'millikart_payment_link',
+        'seo_setup_completed', 'onboarding_completed',
+    }
+    for field, value in shop_data.model_dump(exclude_unset=True).items():
+        if field in ADMIN_UPDATABLE_FIELDS:
             setattr(shop, field, value)
     
     db.commit()

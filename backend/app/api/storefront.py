@@ -278,12 +278,12 @@ def create_order(
     # Calculate subtotal first
     db_products = {}
     for item_data in order_data.items:
-        # Get product
+        # Lock row immediately to prevent concurrent orders overselling the same stock
         product = db.query(Product).filter(
             Product.id == item_data.product_id,
             Product.shop_id == shop.id,
             Product.is_active == True
-        ).first()
+        ).with_for_update().first()
         
         if not product:
             raise HTTPException(
@@ -326,13 +326,18 @@ def create_order(
         coupon = db.query(Coupon).filter(
             Coupon.shop_id == shop.id,
             func.upper(Coupon.code) == order_data.discount_code.strip().upper()
-        ).with_for_update().first() # Lock coupon for usage limit
-        
+        ).with_for_update().first()  # Lock row — concurrent checkouts wait here
+
         if coupon:
-            discount = calculate_discount(coupon, order_data.items, db_products)
-            if discount > Decimal("0.00"):
-                coupon.usage_count += 1
-                db.add(coupon)
+            # Re-check usage limit while holding the lock; another transaction may
+            # have incremented usage_count between the client's validation call and now
+            if coupon.usage_limit is not None and coupon.usage_count >= coupon.usage_limit:
+                coupon = None
+            else:
+                discount = calculate_discount(coupon, order_data.items, db_products)
+                if discount > Decimal("0.00"):
+                    coupon.usage_count += 1
+                    db.add(coupon)
     
     # Calculate total
     shipping_fee = Decimal('0.00')  # TODO: Implement shipping calculation
