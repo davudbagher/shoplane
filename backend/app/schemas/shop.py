@@ -41,25 +41,6 @@ class ShopCreate(ShopBase):
         return v
 
 
-class ShopUpdate(BaseModel):
-    """Schema for updating shop details."""
-    name: Optional[str] = Field(None, min_length=2, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-    phone: Optional[str] = Field(None, max_length=20)
-    email: Optional[str] = None
-    address: Optional[str] = Field(None, max_length=200)
-    whatsapp_number: Optional[str] = None
-    primary_color: Optional[str] = None
-    logo_url: Optional[str] = None
-    banner_url: Optional[str] = None
-    allow_cod: Optional[bool] = None
-    allow_online_payment: Optional[bool] = None
-    plan_type: Optional[SubscriptionPlan] = None
-    subscription_status: Optional[SubscriptionStatus] = None
-    subscription_expires_at: Optional[datetime] = None
-    trial_ends_at: Optional[datetime] = None
-
-
 class MilliKartSettings(BaseModel):
     """Schema for MilliKart payment settings."""
     millikart_enabled: bool = Field(default=False, description="Enable MilliKart payments")
@@ -121,7 +102,7 @@ class ShopResponse(ShopBase):
 
 
 class ShopUpdate(BaseModel):
-    """Schema for updating shop details (Kitchen admin)."""
+    """Schema for updating shop details."""
     name: Optional[str] = None
     description: Optional[str] = None
     phone: Optional[str] = None
@@ -131,6 +112,7 @@ class ShopUpdate(BaseModel):
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
     primary_color: Optional[str] = None
+    custom_domain: Optional[str] = None
     allow_cod: Optional[bool] = None
     allow_online_payment: Optional[bool] = None
     millikart_enabled: Optional[bool] = None

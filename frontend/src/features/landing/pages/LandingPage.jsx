@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LandingNavbar } from '../components/LandingNavbar';
 import { LandingHero } from '../components/LandingHero';
 import { LandingLogos } from '../components/LandingLogos';
@@ -6,14 +7,19 @@ import { LandingFeatureGrid } from '../components/LandingFeatureGrid';
 import { LandingTestimonial } from '../components/LandingTestimonial';
 import { LandingCTA } from '../components/LandingCTA';
 import { LandingFooter } from '../components/LandingFooter';
+import { OnboardingModal } from '../../platform/components/OnboardingModal';
 
 export const LandingPage = () => {
+  const [showModal, setShowModal] = useState(false);
+  const openModal = () => setShowModal(true);
+  const closeModal = () => setShowModal(false);
+
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#e5ff24] selection:text-black">
-      <LandingNavbar />
+      <LandingNavbar onOpenModal={openModal} />
 
       <main>
-        <LandingHero />
+        <LandingHero onOpenModal={openModal} />
 
         <LandingLogos />
 
@@ -57,6 +63,12 @@ export const LandingPage = () => {
       </main>
 
       <LandingFooter />
+
+      <OnboardingModal
+        isOpen={showModal}
+        onClose={closeModal}
+        onSubmitSuccess={closeModal}
+      />
     </div>
   );
 };

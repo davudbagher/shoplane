@@ -128,16 +128,9 @@ export const LoginPage = () => {
               </Button>
             </form>
 
-            {/* Register Link */}
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Hesabınız yoxdur?{' '}
-                <button
-                  onClick={() => navigate('/register')}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Qeydiyyatdan keç
-                </button>
+              <p className="text-sm text-gray-500">
+                Giriş məlumatlarınızı WhatsApp-da aldığınız kredensiallara görə daxil edin.
               </p>
             </div>
           </div>

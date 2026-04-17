@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage, RegisterPage } from "./features/auth/pages";
+import { LoginPage } from "./features/auth/pages";
 import { DashboardPage } from "./features/admin/pages/DashboardPage";
 import { CouponsPage } from "./features/admin/pages/CouponsPage";
 import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
@@ -25,8 +25,7 @@ function App() {
   // Detect if we're on admin subdomain or path
   const isAdminRoute = window.location.pathname.startsWith('/admin') ||
     window.location.pathname.startsWith('/kitchen') ||
-    window.location.pathname.startsWith('/login') ||
-    window.location.pathname.startsWith('/register');
+    window.location.pathname.startsWith('/login');
 
   const shopSubdomain = getShopSubdomain();
   const isLandingPage = shopSubdomain === null;
@@ -35,7 +34,6 @@ function App() {
     <Routes>
       {/* ===== AUTH ROUTES (Public) ===== */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
 
       {/* ===== STOREFRONT ROUTES (Public - Customer Facing) ===== */}
       <Route path="/" element={isLandingPage ? <LandingPage /> : <ShopHomePage />} />

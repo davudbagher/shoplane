@@ -97,7 +97,7 @@ def update_shop(
         'name', 'description', 'phone', 'email', 'address', 'whatsapp_number',
         'primary_color', 'logo_url', 'banner_url', 'allow_cod', 'allow_online_payment',
         'millikart_enabled', 'millikart_iban', 'millikart_payment_link',
-        'seo_setup_completed', 'onboarding_completed',
+        'seo_setup_completed', 'onboarding_completed', 'custom_domain',
     }
     for field, value in shop_data.model_dump(exclude_unset=True).items():
         if field in UPDATABLE_FIELDS:

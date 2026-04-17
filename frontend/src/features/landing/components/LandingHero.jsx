@@ -1,7 +1,4 @@
-import { useNavigate } from 'react-router-dom';
-
-export const LandingHero = () => {
-  const navigate = useNavigate();
+export const LandingHero = ({ onOpenModal }) => {
 
   return (
     <section className="relative pt-32 pb-24 md:pt-48 md:pb-32 bg-gradient-to-b from-indigo-50/50 to-white overflow-hidden">
@@ -24,7 +21,7 @@ export const LandingHero = () => {
            
            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-8">
              <button
-               onClick={() => navigate('/register')}
+               onClick={onOpenModal}
                className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-indigo-700 transition-colors shadow-lg"
              >
                Start building free

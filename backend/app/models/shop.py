@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -69,7 +69,6 @@ class Shop(Base):
     millikart_payment_link = Column(String, nullable=True)  # Direct payment link for checkout
 
     # Credentials & Setup (Stored for Kitchen admin)
-    setup_token = Column(String, unique=True, index=True, nullable=True)  # Token for password setup
     temporary_password = Column(String, nullable=True)  # Initial temp password (stored for admin reference)
     credentials_sent = Column(Boolean, default=False)  # Track if credentials were sent to merchant
     credentials_sent_at = Column(DateTime(timezone=True), nullable=True)  # When credentials were sent

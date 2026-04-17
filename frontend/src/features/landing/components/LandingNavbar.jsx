@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export const LandingNavbar = () => {
+export const LandingNavbar = ({ onOpenModal }) => {
   return (
     <nav className="sticky top-0 w-full z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
@@ -29,12 +29,12 @@ export const LandingNavbar = () => {
             <Link to="/login" className="text-sm font-semibold text-gray-600 hover:text-gray-900">
               Log in
             </Link>
-            <Link
-              to="/register"
+            <button
+              onClick={onOpenModal}
               className="bg-indigo-600 text-white px-6 py-3 rounded-full font-bold text-sm hover:bg-indigo-700 shadow-md"
             >
               Get Started Free
-            </Link>
+            </button>
           </div>
         </div>
       </div>
