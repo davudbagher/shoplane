@@ -1,4 +1,5 @@
 {
+  "llm.apiKey": "sk-ffdba03a83c8428e8c513723f94b38d9",
   "permissions": {
     "allow": [
       "Bash(python *)",

@@ -19,19 +19,31 @@ export const CreateProductPage = () => {
     is_new_arrival: false,
   });
 
-  const [images, setImages] = useState([]); // Array of strings (URLs)
+  const [images, setImages] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    adminApi.getProducts(shopId).then(data => {
-      // Extract unique categories for better UX dropdown/datalist
-      const cats = [...new Set(data.map(p => p.category).filter(Boolean))];
-      setCategories(cats);
-    }).catch(() => { });
+    adminApi.getCategories(shopId).then(setCategories).catch(() => {});
   }, [shopId]);
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    try {
+      const created = await adminApi.createCategory(shopId, name);
+      setCategories(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setFormData(prev => ({ ...prev, category: created.name }));
+      setNewCategoryName("");
+      setShowAddCategory(false);
+    } catch (err) {
+      alert(err.response?.data?.detail || "Kateqoriya əlavə edilərkən xəta baş verdi");
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -191,18 +203,36 @@ export const CreateProductPage = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Kateqoriya</label>
-                <input
-                  type="text"
+                <select
                   name="category"
-                  list="category-list"
-                  placeholder="Seçin və ya yazın"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
-                />
-                <datalist id="category-list">
-                  {categories.map(c => <option key={c} value={c} />)}
-                </datalist>
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 bg-white"
+                >
+                  <option value="">-- Seçin --</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                {showAddCategory ? (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddCategory())}
+                      placeholder="Yeni kateqoriya adı"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                      autoFocus
+                    />
+                    <button type="button" onClick={handleAddCategory} className="px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700">Əlavə Et</button>
+                    <button type="button" onClick={() => setShowAddCategory(false)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Ləğv Et</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowAddCategory(true)} className="mt-1.5 text-xs text-gray-500 hover:text-gray-900 underline">
+                    + Yeni kateqoriya əlavə et
+                  </button>
+                )}
               </div>
             </div>
           </div>

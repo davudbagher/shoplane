@@ -17,6 +17,11 @@ import sys
 from app.database import SessionLocal
 from app.models.user import User
 from app.utils.security import get_password_hash
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_superuser():
     print("🔐 Shoplane Superuser Creation")

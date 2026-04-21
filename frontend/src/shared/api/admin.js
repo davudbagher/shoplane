@@ -148,6 +148,23 @@ export const adminApi = {
     return response.data;
   },
 
+  // ===== CATEGORIES API =====
+
+  getCategories: async (shopId) => {
+    const response = await adminClient.get(`/admin/shops/${shopId}/categories`);
+    return response.data;
+  },
+
+  createCategory: async (shopId, name) => {
+    const response = await adminClient.post(`/admin/shops/${shopId}/categories`, { name });
+    return response.data;
+  },
+
+  deleteCategory: async (shopId, categoryId) => {
+    const response = await adminClient.delete(`/admin/shops/${shopId}/categories/${categoryId}`);
+    return response.data;
+  },
+
   // ===== PAYMENT SETTINGS API =====
 
   getPaymentSettings: async (shopId) => {

@@ -20,6 +20,7 @@ from app.schemas.order import OrderCreate, OrderResponse
 from app.schemas.customer import CustomerCreate, CustomerResponse
 from app.schemas.coupon import CouponValidateRequest, CouponValidateResponse
 from app.utils.dependencies import get_current_shop
+from app.utils.email import send_order_confirmation_email
 
 router = APIRouter(prefix="/storefront", tags=["Storefront - Public"])
 
@@ -393,6 +394,9 @@ def create_order(
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
+
+    if order_data.customer_email:
+        background_tasks.add_task(send_order_confirmation_email, new_order, shop)
 
     return new_order
 

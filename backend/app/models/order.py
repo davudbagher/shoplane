@@ -119,35 +119,3 @@ class Order(Base):
     def total_items(self) -> int:
         """Get total number of items in order."""
         return sum(item.quantity for item in self.items)
-
-
-# class OrderItem(Base):
-#     """
-#     Individual items within an order.
-    
-#     Denormalized design: We store product name/price at time of order
-#     to preserve historical data (even if product is later deleted/changed).
-#     """
-#     __tablename__ = "order_items"
-    
-#     id = Column(Integer, primary_key=True, index=True)
-    
-#     # Foreign keys
-#     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
-#     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    
-#     # Denormalized product data (snapshot at time of order)
-#     product_name = Column(String(200), nullable=False)
-#     product_image = Column(String(500), nullable=True)  # First image URL
-    
-#     # Quantity and pricing
-#     quantity = Column(Integer, nullable=False)
-#     unit_price = Column(Numeric(10, 2), nullable=False)  # Price per unit at time of order
-#     total_price = Column(Numeric(10, 2), nullable=False)  # unit_price * quantity
-    
-#     # Relationships
-#     order = relationship("Order", back_populates="items")
-#     product = relationship("Product")
-    
-#     def __repr__(self):
-#         return f"<OrderItem {self.quantity}x {self.product_name} @ {self.unit_price} AZN>"

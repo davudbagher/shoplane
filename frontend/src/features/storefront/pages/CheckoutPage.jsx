@@ -103,6 +103,10 @@ export const CheckoutPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const subtotal = cartItems.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0);
+  const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const finalTotal = Math.max(0, subtotal - discountAmount);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -151,9 +155,6 @@ export const CheckoutPage = () => {
   };
 
   const formatPrice = (price) => parseFloat(price || 0).toFixed(2);
-  const subtotal = cartItems.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0);
-  const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
-  const finalTotal = Math.max(0, subtotal - discountAmount);
 
   return (
     <StorefrontLayout>

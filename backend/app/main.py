@@ -3,7 +3,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload, admin_coupons, super_admin
+from app.api import auth, admin_shops, admin_products, admin_orders, storefront, upload, admin_coupons, super_admin, admin_categories
+from app.models.category import Category  # noqa: F401 — ensures table is created
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -77,6 +78,11 @@ app.include_router(
     admin_coupons.router,
     prefix="/admin/shops/{shop_id}/coupons",
     tags=["Admin - Coupons"]
+)
+app.include_router(
+    admin_categories.router,
+    prefix="/admin/shops/{shop_id}/categories",
+    tags=["Admin - Categories"]
 )
 app.include_router(admin_orders.router)            # Order management (admin)
 app.include_router(storefront.router)              # Storefront (public)
