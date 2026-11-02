@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.models.shop import Shop
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
+from app.schemas.user import SetupPassword, UserCreate, UserLogin, UserResponse, Token
 from app.utils.security import get_password_hash, verify_password, create_access_token
 from app.utils.dependencies import get_current_user
 
@@ -91,6 +92,29 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             "created_at": user.created_at.isoformat(),
         }
     }
+
+
+@router.post("/setup-password")
+def setup_password(data: SetupPassword, db: Session = Depends(get_db)):
+    """
+    Set the merchant's password using the single-use link sent by the Kitchen.
+    """
+    shop = db.query(Shop).filter(Shop.setup_token == data.token).first()
+
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu link etibarsızdır və ya artıq istifadə olunub"
+        )
+
+    owner = shop.owner
+    owner.hashed_password = get_password_hash(data.password)
+
+    # Clear every token for this owner so no other link can reset the password
+    db.query(Shop).filter(Shop.owner_id == owner.id).update({"setup_token": None})
+    db.commit()
+
+    return {"email": owner.email}
 
 
 @router.get("/me", response_model=UserResponse)

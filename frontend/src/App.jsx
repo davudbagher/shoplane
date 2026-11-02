@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage } from "./features/auth/pages";
+import { LoginPage, SetupPasswordPage } from "./features/auth/pages";
 import { DashboardPage } from "./features/admin/pages/DashboardPage";
 import { CouponsPage } from "./features/admin/pages/CouponsPage";
 import { CreateShopPage } from "./features/admin/pages/CreateShopPage";
@@ -34,6 +34,7 @@ function App() {
     <Routes>
       {/* ===== AUTH ROUTES (Public) ===== */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/setup" element={<SetupPasswordPage />} />
 
       {/* ===== STOREFRONT ROUTES (Public - Customer Facing) ===== */}
       <Route path="/" element={isLandingPage ? <LandingPage /> : <ShopHomePage />} />

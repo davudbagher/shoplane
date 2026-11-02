@@ -38,8 +38,8 @@ if [ ! -d "venv" ] && [ ! -d ".venv" ]; then
     echo -e "${YELLOW}⚠️  No virtual environment found. Creating one...${NC}"
     python3 -m venv venv
     source venv/bin/activate
-    pip install -r requirements.txt
-    pip install pytest httpx pytest-asyncio pytest-cov faker
+    pip install -r requirements-dev.txt
+    pip install pytest-asyncio pytest-cov faker
 fi
 
 # Activate virtual environment
@@ -50,7 +50,7 @@ elif [ -d ".venv" ]; then
 fi
 
 echo -e "${BLUE}📦 Installing test dependencies...${NC}"
-pip install -q pytest httpx pytest-asyncio pytest-cov faker 2>&1 | grep -v "Requirement already satisfied" || true
+pip install -q -r requirements-dev.txt pytest-asyncio pytest-cov faker 2>&1 | grep -v "Requirement already satisfied" || true
 
 echo ""
 echo -e "${BLUE}🔍 Running Authentication Tests...${NC}"
@@ -343,7 +343,7 @@ else
     echo -e "  7. Add rate limiting on auth endpoints"
     echo -e "  8. Add image upload validation"
     echo ""
-    echo -e "${YELLOW}See PROJECT_ANALYSIS.md for full details${NC}"
+    echo -e "${YELLOW}See docs/PROJECT_ANALYSIS.md for full details${NC}"
 fi
 
 echo ""

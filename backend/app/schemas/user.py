@@ -21,6 +21,12 @@ class UserLogin(BaseModel):
     password: str
 
 
+class SetupPassword(BaseModel):
+    """Schema for a merchant setting their password from a setup link."""
+    token: str = Field(..., min_length=32)
+    password: str = Field(..., min_length=8, max_length=100)
+
+
 class UserUpdate(BaseModel):
     """Schema for updating user profile."""
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)

@@ -13,7 +13,7 @@ class OrderItem(Base):
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
     
     # Product Info (denormalized for order history)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)  # NULL once the product is deleted
     product_name = Column(String, nullable=False)      # Snapshot at order time
     product_image = Column(String, nullable=True)      # First image
     

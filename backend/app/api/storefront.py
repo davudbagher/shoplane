@@ -280,6 +280,17 @@ def calculate_discount(coupon: Coupon, order_items_data: list, db_products: dict
         return min(coupon.discount_value, applicable_total)
 
 
+def is_coupon_live(coupon: Coupon) -> bool:
+    """True if the coupon is switched on and inside its validity window."""
+    now = datetime.now(timezone.utc)
+    # SQLite drops the timezone; stored values are always UTC
+    starts_at, ends_at = (
+        dt.replace(tzinfo=dt.tzinfo or timezone.utc) if dt else None
+        for dt in (coupon.starts_at, coupon.ends_at)
+    )
+    return bool(coupon.is_active) and not (starts_at and now < starts_at) and not (ends_at and now > ends_at)
+
+
 @router.post("/validate-coupon", response_model=CouponValidateResponse)
 def validate_coupon(
     request: CouponValidateRequest,
@@ -295,8 +306,7 @@ def validate_coupon(
     if not coupon:
         return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kupon tapılmadı")
         
-    now = datetime.now(timezone.utc)
-    if not coupon.is_active or (coupon.starts_at and now < coupon.starts_at) or (coupon.ends_at and now > coupon.ends_at):
+    if not is_coupon_live(coupon):
         return CouponValidateResponse(is_valid=False, discount_amount=Decimal("0.00"), message="Kuponun vaxtı bitib və ya aktiv deyil")
         
     if coupon.usage_limit is not None and coupon.usage_count >= coupon.usage_limit:
@@ -398,7 +408,7 @@ def create_order(
             func.upper(Coupon.code) == order_data.discount_code.strip().upper()
         ).with_for_update().first()  # Lock row — concurrent checkouts wait here
 
-        if coupon:
+        if coupon and is_coupon_live(coupon):
             # Re-check usage limit while holding the lock; another transaction may
             # have incremented usage_count between the client's validation call and now
             if coupon.usage_limit is not None and coupon.usage_count >= coupon.usage_limit:

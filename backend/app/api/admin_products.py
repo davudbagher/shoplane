@@ -56,6 +56,7 @@ def create_product(
         inventory_count=product_data.inventory_count,
         category=product_data.category,
         images=product_data.images or [],
+        variants=product_data.variants or [],
         track_inventory=True,
         is_active=True,
         is_new_arrival=product_data.is_new_arrival,

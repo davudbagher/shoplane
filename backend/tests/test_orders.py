@@ -175,7 +175,7 @@ class TestCreateOrder:
         )
         assert response.status_code == 422  # Validation error
 
-    def test_create_order_cod_not_allowed(self, client: TestClient, db_session, test_product: Product, shop_headers: dict):
+    def test_create_order_cod_not_allowed(self, client: TestClient, db_session, test_shop: Shop, test_product: Product, shop_headers: dict):
         """Test order when shop doesn't allow COD."""
         # Update shop to disable COD
         test_shop.allow_cod = False
@@ -378,7 +378,8 @@ class TestTrackOrder:
         db_session.commit()
         
         response = client.get(
-            f"/storefront/orders/{order.order_number}?phone={customer.phone}",
+            f"/storefront/orders/{order.order_number}",
+            params={"phone": customer.phone},
             headers=shop_headers
         )
         assert response.status_code == 200
@@ -417,7 +418,7 @@ class TestTrackOrder:
         db_session.commit()
         
         response = client.get(
-            f"/storefront/orders/{order.order_number}?phone=+994500000000",  # Wrong phone
+            f"/storefront/orders/{order.order_number}?phone=%2B994500000000",  # Wrong phone
             headers=shop_headers
         )
         assert response.status_code == 404

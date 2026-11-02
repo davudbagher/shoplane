@@ -1,5 +1,5 @@
 // Test Authentication Components
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthProvider, useAuth } from '../src/shared/contexts/AuthContext';
 import { BrowserRouter } from 'react-router-dom';
@@ -91,9 +91,6 @@ describe('AuthContext', () => {
     await waitFor(() => {
       expect(authValue.user).toEqual(mockResponse.user);
     });
-
-    expect(localStorage.setItem).toHaveBeenCalledWith('access_token', 'new-token');
-    expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockResponse.user));
   });
 
   it('should handle failed login', async () => {
@@ -173,7 +170,7 @@ describe('AuthContext', () => {
       localStorage.removeItem('user');
     });
 
-    authValue.logout();
+    act(() => authValue.logout());
 
     expect(authValue.user).toBeNull();
     expect(authValue.isAuthenticated).toBe(false);

@@ -135,19 +135,6 @@ export const LoginPage = () => {
             </div>
           </div>
         </div>
-
-        {/* Demo Credentials (Remove in production!) */}
-        <div className="mt-6 p-4 bg-warning-50 border border-warning-200 rounded-lg">
-          <p className="text-sm text-warning-800 font-medium mb-2">
-            🧪 Test üçün:
-          </p>
-          <p className="text-xs text-warning-700">
-            Backend serveri işə salın: <code className="bg-warning-100 px-1 py-0.5 rounded">cd ~/shoplane/backend && uvicorn app.main:app --reload</code>
-          </p>
-          <p className="text-xs text-warning-700 mt-2">
-            👑 Superuser girişi: <code className="bg-warning-100 px-1 py-0.5 rounded">{import.meta.env.VITE_ADMIN_EMAIL || 'davudbaghir@gmail.com'}</code>
-          </p>
-        </div>
       </div>
     </div>
   );

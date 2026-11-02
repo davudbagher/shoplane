@@ -16,7 +16,7 @@ class OrderItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    product_id: int
+    product_id: Optional[int]
     product_name: str
     product_image: Optional[str]
     quantity: int

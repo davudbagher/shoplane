@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     # Domain Configuration
     BASE_DOMAIN: str = "1line.az"
     ADMIN_SUBDOMAIN: str = "admin"
-    
+    FRONTEND_URL: str = "http://localhost:5173"  # Used in links sent to merchants
+    API_URL: str = "http://localhost:8000"  # Used in uploaded image URLs
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173"
     
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
     
     # File Upload
     MAX_UPLOAD_SIZE: int = 5242880  # 5MB
+    MAX_PUBLIC_UPLOAD_SIZE: int = 2097152  # 2MB
     UPLOAD_DIR: str = "uploads/products"
     
     @property

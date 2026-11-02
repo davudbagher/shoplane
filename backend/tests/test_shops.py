@@ -126,8 +126,7 @@ class TestListShops:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "shops" in data
-        assert len(data["shops"]) >= 2
+        assert len(data) >= 2
 
     def test_list_shops_only_owned(self, client: TestClient, auth_headers: dict, db_session):
         """Test that user only sees their own shops."""
@@ -159,7 +158,7 @@ class TestListShops:
         assert response.status_code == 200
         data = response.json()
         # Should not include other user's shop
-        shop_owner_ids = [shop["owner_id"] for shop in data["shops"]]
+        shop_owner_ids = [shop["owner_id"] for shop in data]
         assert all(owner_id == test_user.id for owner_id in shop_owner_ids)
 
 
@@ -209,7 +208,7 @@ class TestUpdateShop:
         assert data["description"] == "Updated description"
 
     def test_update_shop_subscription(self, client: TestClient, auth_headers: dict, test_shop: Shop):
-        """Test updating shop subscription plan."""
+        """Test that owners cannot change their own plan."""
         update_data = {
             "plan_type": "PRO",
         }
@@ -221,20 +220,7 @@ class TestUpdateShop:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["plan_type"] == "PRO"
-
-
-class TestUpgradeSubscription:
-    """Test shop subscription upgrade endpoint."""
-
-    def test_upgrade_subscription(self, client: TestClient, auth_headers: dict, test_shop: Shop):
-        """Test upgrading shop subscription."""
-        response = client.post(
-            f"/admin/shops/{test_shop.id}/upgrade",
-            headers=auth_headers
-        )
-        # May succeed or fail depending on implementation
-        assert response.status_code in [200, 400, 402]
+        assert data["plan_type"] == "standard"
 
 
 class TestDeleteShop:
@@ -246,7 +232,7 @@ class TestDeleteShop:
             f"/admin/shops/{test_shop.id}",
             headers=auth_headers
         )
-        assert response.status_code == 200
+        assert response.status_code == 204
         
         # Verify shop is deactivated
         response = client.get(
@@ -278,16 +264,14 @@ class TestShopPaymentSettings:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "allow_cod" in data
-        assert "allow_online_payment" in data
+        assert "millikart_enabled" in data
+        assert "millikart_iban" in data
 
     def test_update_payment_settings(self, client: TestClient, auth_headers: dict, test_shop: Shop):
         """Test updating shop payment settings."""
         payment_settings = {
-            "allow_cod": False,
-            "allow_online_payment": True,
             "millikart_enabled": True,
-            "millikart_iban": "AZ12345678901234567890",
+            "millikart_iban": "AZ21NABZ00000000137010001944",
             "millikart_account_info": "Test Account",
         }
         
@@ -298,5 +282,4 @@ class TestShopPaymentSettings:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["allow_cod"] is False
         assert data["millikart_enabled"] is True

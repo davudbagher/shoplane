@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime, timedelta, timezone
 from app.database import get_db
 from app.models.user import User
-from app.models.shop import Shop, SubscriptionPlan
+from app.models.shop import Shop, SubscriptionPlan, SubscriptionStatus
 from app.schemas.shop import ShopCreate, ShopUpdate, ShopResponse, MilliKartSettings
 from app.utils.dependencies import get_current_user, verify_shop_owner
 
@@ -26,6 +27,8 @@ def create_shop(
             detail=f"Subdomain '{shop_data.subdomain}' is already taken"
         )
     
+    trial_end = datetime.now(timezone.utc) + timedelta(days=14)
+
     # Create shop with auto-generated slug (same as subdomain for now)
     new_shop = Shop(
         name=shop_data.name,
@@ -33,8 +36,10 @@ def create_shop(
         slug=shop_data.subdomain,  # ← ADD THIS LINE! Auto-generate slug from subdomain
         description=shop_data.description,
         owner_id=current_user.id,
-        subscription_plan=SubscriptionPlan.BASE,  # Default to BASE plan (free)
-        subscription_active=True,
+        plan_type=SubscriptionPlan.STANDARD,
+        subscription_status=SubscriptionStatus.TRIAL,
+        trial_ends_at=trial_end,
+        subscription_expires_at=trial_end,
         is_active=True,
         allow_cod=True,  # Enable cash on delivery by default (Azerbaijan standard)
         allow_online_payment=False,  # Disabled until payment gateway configured
@@ -103,34 +108,6 @@ def update_shop(
         if field in UPDATABLE_FIELDS:
             setattr(shop, field, value)
     
-    db.commit()
-    db.refresh(shop)
-    
-    return shop
-
-
-@router.post("/{shop_id}/upgrade", response_model=ShopResponse)
-def upgrade_subscription(
-    shop_id: int,
-    shop: Shop = Depends(verify_shop_owner),
-    db: Session = Depends(get_db)
-):
-    """
-    Upgrade shop from BASE (49 AZN) to PRO (79 AZN) plan.
-    
-    PRO features (for future implementation):
-    - Custom domain support
-    - Advanced analytics
-    - Priority support
-    - Remove platform branding
-    """
-    if shop.subscription_plan == SubscriptionPlan.PRO:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Shop is already on PRO plan"
-        )
-    
-    shop.subscription_plan = SubscriptionPlan.PRO
     db.commit()
     db.refresh(shop)
     

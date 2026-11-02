@@ -5,7 +5,7 @@ Sets up test database, client, and common test data.
 import pytest
 import os
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 
@@ -36,6 +36,14 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test_shoplane.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
+
+
+@event.listens_for(engine, "connect")
+def enable_sqlite_foreign_keys(connection, _):
+    """SQLite ignores foreign keys unless asked, unlike Postgres."""
+    connection.execute("PRAGMA foreign_keys=ON")
+
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -57,6 +65,10 @@ def db_session():
     try:
         yield session
     finally:
+        session.rollback()
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(table.delete())
+        session.commit()
         session.close()
 
 

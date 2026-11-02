@@ -93,8 +93,8 @@ class TestShopModel:
         
         assert shop.id is not None
         assert shop.name == "Model Test Shop"
-        assert shop.plan_type == "STANDARD"  # Default
-        assert shop.subscription_status == "TRIAL"  # Default
+        assert shop.plan_type == "standard"  # Default
+        assert shop.subscription_status == "trial"  # Default
 
     def test_shop_unique_subdomain(self, db_session, test_user: User):
         """Test that subdomain must be unique."""
@@ -458,7 +458,7 @@ class TestLeadModel:
         lead = Lead(
             full_name="Lead Person",
             email="lead@example.com",
-            phone="+994504444444",
+            whatsapp="+994504444444",
             shop_name="Future Shop",
             status="PENDING",
         )
@@ -467,14 +467,14 @@ class TestLeadModel:
         db_session.refresh(lead)
         
         assert lead.id is not None
-        assert lead.status == "PENDING"
+        assert lead.status == "pending"
 
     def test_lead_screening_status(self, db_session):
         """Test lead screening status field."""
         lead = Lead(
             full_name="Screened Lead",
             email="screened@example.com",
-            phone="+994505555555",
+            whatsapp="+994505555555",
             shop_name="Screened Shop",
             screening_status="QUALIFIED",
         )

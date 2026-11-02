@@ -711,15 +711,9 @@ export const PlatformDashboard = () => {
                       {createdShopCredentials.credentials.email}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-amber-700">Temporary Password</span>
-                    <span className="text-sm font-mono bg-white px-3 py-1 rounded border border-amber-200 font-bold text-amber-900">
-                      {createdShopCredentials.credentials.temporary_password}
-                    </span>
-                  </div>
                   <div className="pt-2 border-t border-amber-200">
                     <p className="text-xs text-amber-800 mb-2">
-                      💡 Merchant can use setup token to set their own password:
+                      💡 Merchant sets their own password with this single-use link:
                     </p>
                     <a 
                       href={createdShopCredentials.credentials.setup_url}
@@ -736,10 +730,10 @@ export const PlatformDashboard = () => {
               <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-green-900 mb-2">📋 Next Steps:</h4>
                 <ol className="space-y-1 text-xs text-green-800 list-decimal list-inside">
-                  <li>Copy the credentials above</li>
+                  <li>Copy the setup link above</li>
                   <li>Send to merchant via WhatsApp or email</li>
+                  <li>They open the link and set their password</li>
                   <li>They login at admin panel URL</li>
-                  <li>They can set their own password using setup token</li>
                   <li>Start managing their online shop! 🚀</li>
                 </ol>
               </div>
@@ -753,7 +747,7 @@ export const PlatformDashboard = () => {
 Shop: ${createdShopCredentials.shop.name}
 URL: ${createdShopCredentials.shop.url}
 Email: ${createdShopCredentials.credentials.email}
-Password: ${createdShopCredentials.credentials.temporary_password}
+Set your password: ${createdShopCredentials.credentials.setup_url}
                   `.trim();
                   navigator.clipboard.writeText(text);
                   alert('Credentials copied to clipboard!');

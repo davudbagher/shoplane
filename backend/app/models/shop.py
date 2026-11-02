@@ -70,7 +70,6 @@ class Shop(Base):
     millikart_payment_link = Column(String, nullable=True)  # Direct payment link for checkout
 
     # Credentials & Setup (Stored for Kitchen admin)
-    temporary_password = Column(String, nullable=True)  # Initial temp password (stored for admin reference)
     credentials_sent = Column(Boolean, default=False)  # Track if credentials were sent to merchant
     credentials_sent_at = Column(DateTime(timezone=True), nullable=True)  # When credentials were sent
     seo_setup_completed = Column(Boolean, default=False)  # Track if SEO was configured

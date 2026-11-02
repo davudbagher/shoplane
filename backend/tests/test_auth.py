@@ -91,8 +91,8 @@ class TestUserLogin:
         """Test successful login."""
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_user.email,
+            json={
+                "email": test_user.email,
                 "password": "testpassword123"
             }
         )
@@ -108,8 +108,8 @@ class TestUserLogin:
         """Test login with wrong password."""
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_user.email,
+            json={
+                "email": test_user.email,
                 "password": "wrongpassword"
             }
         )
@@ -120,8 +120,8 @@ class TestUserLogin:
         """Test login with non-existent user."""
         response = client.post(
             "/auth/login",
-            data={
-                "username": "nonexistent@example.com",
+            json={
+                "email": "nonexistent@example.com",
                 "password": "password123"
             }
         )
@@ -135,8 +135,8 @@ class TestUserLogin:
 
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_user.email,
+            json={
+                "email": test_user.email,
                 "password": "testpassword123"
             }
         )
@@ -151,8 +151,8 @@ class TestUserLogin:
         """Test that login returns a valid JWT token."""
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_user.email,
+            json={
+                "email": test_user.email,
                 "password": "testpassword123"
             }
         )
@@ -204,8 +204,8 @@ class TestAuthenticationSecurity:
         for i in range(10):
             response = client.post(
                 "/auth/login",
-                data={
-                    "username": test_user.email,
+                json={
+                    "email": test_user.email,
                     "password": f"wrongpassword{i}"
                 }
             )
@@ -215,8 +215,8 @@ class TestAuthenticationSecurity:
         # This test documents that the 11th attempt also fails
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_user.email,
+            json={
+                "email": test_user.email,
                 "password": "wrongpassword11"
             }
         )
@@ -241,8 +241,8 @@ class TestAuthenticationSecurity:
         """Test superuser login."""
         response = client.post(
             "/auth/login",
-            data={
-                "username": test_superuser.email,
+            json={
+                "email": test_superuser.email,
                 "password": "adminpassword123"
             }
         )

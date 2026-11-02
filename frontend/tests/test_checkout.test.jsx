@@ -146,7 +146,7 @@ describe('CheckoutPage', () => {
 
     await waitFor(() => {
       // Subtotal: (50 * 2) + (30 * 1) = 130
-      expect(screen.getByText('130.00 ₼')).toBeInTheDocument();
+      expect(screen.getAllByText('130.00 ₼').length).toBeGreaterThan(0);
     });
   });
 
@@ -182,7 +182,7 @@ describe('CheckoutPage', () => {
 
     // Should show pickup point selector
     await waitFor(() => {
-      expect(screen.getByText('Təhvil məntəqəsi seçin')).toBeInTheDocument();
+      expect(screen.getByText('-- Məntəqə seçin --')).toBeInTheDocument();
     });
   });
 
@@ -222,6 +222,10 @@ describe('CheckoutPage', () => {
     });
     fireEvent.input(screen.getByPlaceholderText('+994 XX XXX XX XX'), {
       target: { value: '+994501234567' },
+    });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Bakı' } });
+    fireEvent.input(screen.getByPlaceholderText('Küçə, bina, mənzil nömrəsi...'), {
+      target: { value: 'Test Street 1' },
     });
 
     // Submit
@@ -271,6 +275,10 @@ describe('CheckoutPage', () => {
     });
     fireEvent.input(screen.getByPlaceholderText('+994 XX XXX XX XX'), {
       target: { value: '+994501234567' },
+    });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Bakı' } });
+    fireEvent.input(screen.getByPlaceholderText('Küçə, bina, mənzil nömrəsi...'), {
+      target: { value: 'Test Street 1' },
     });
 
     // Submit
@@ -326,18 +334,7 @@ describe('CheckoutPage', () => {
     });
   });
 
-  it('BUG: should handle MilliKart payment redirect (finalTotal undefined bug)', async () => {
-    /**
-     * This test documents the critical bug found in CheckoutPage.jsx:
-     * The variable `finalTotal` is used before it's defined, causing ReferenceError.
-     * 
-     * Line ~140 in CheckoutPage.jsx:
-     * const paymentUrl = `${shop.millikart_payment_link}?amount=${finalTotal}&order=${order.order_number}`;
-     * 
-     * But finalTotal is calculated AFTER this line via:
-     * const finalTotal = Math.max(0, subtotal - discountAmount);
-     */
-    
+  it('should create the order before redirecting to MilliKart', async () => {
     const mockCart = [
       {
         product_id: 1,
@@ -348,7 +345,9 @@ describe('CheckoutPage', () => {
     ];
     localStorage.setItem('cart', JSON.stringify(mockCart));
 
-    storefrontApi.getShop.mockResolvedValueOnce({
+    // StorefrontLayout calls getShop too, so one response is not enough
+    storefrontApi.getShop.mockReset();
+    storefrontApi.getShop.mockResolvedValue({
       id: 1,
       name: 'Test Shop',
       allow_cod: true,
@@ -375,16 +374,21 @@ describe('CheckoutPage', () => {
     fireEvent.input(screen.getByPlaceholderText('+994 XX XXX XX XX'), {
       target: { value: '+994501234567' },
     });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Bakı' } });
+    fireEvent.input(screen.getByPlaceholderText('Küçə, bina, mənzil nömrəsi...'), {
+      target: { value: 'Test Street 1' },
+    });
 
     // Select MilliKart payment
-    const millikartRadio = screen.getByLabelText(/Onlayn Ödəniş \(MilliKart\)/);
-    fireEvent.click(millikartRadio);
+    fireEvent.click(await screen.findByRole('radio', { name: /MilliKart/ }));
 
-    // Submit - this will trigger the buggy code path
-    const submitButton = screen.getByText(/SİFARİŞİ TƏSDİQ ET/);
-    
-    // The test will fail due to ReferenceError: finalTotal is not defined
-    // This documents the bug for fixing
-    expect(() => fireEvent.click(submitButton)).toThrowError;
+    // Submit
+    fireEvent.click(screen.getByText(/SİFARİŞİ TƏSDİQ ET/));
+
+    await waitFor(() => {
+      expect(storefrontApi.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ payment_method: 'millikart' })
+      );
+    });
   });
 });

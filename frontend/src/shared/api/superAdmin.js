@@ -8,10 +8,11 @@ import { apiClient } from './client';
  */
 export const superAdminApi = {
   /**
-   * Upload an image file.
+   * Upload a logo or banner from the onboarding form.
+   * Uses the public route because the same form runs on the landing page, with no login.
    */
   uploadImage: async (file) => {
-    const response = await apiClient.post('/admin/upload', file, {
+    const response = await apiClient.post('/public/upload', file, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;

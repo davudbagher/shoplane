@@ -37,8 +37,8 @@ class TestMerchantOnboardingFlow:
         # Step 2: Login
         login_response = client.post(
             "/auth/login",
-            data={
-                "username": "merchant@example.com",
+            json={
+                "email": "merchant@example.com",
                 "password": "merchantpass123"
             }
         )
@@ -80,8 +80,8 @@ class TestMerchantOnboardingFlow:
         shops_response = client.get("/admin/shops", headers=auth_headers)
         assert shops_response.status_code == 200
         shops_data = shops_response.json()
-        assert len(shops_data["shops"]) >= 1
-        assert any(s["name"] == "My First Shop" for s in shops_data["shops"])
+        assert len(shops_data) >= 1
+        assert any(s["name"] == "My First Shop" for s in shops_data)
 
 
 class TestCompleteCheckoutFlow:
@@ -168,7 +168,7 @@ class TestCompleteCheckoutFlow:
 
         # Step 4: Track order
         track_response = client.get(
-            f"/storefront/orders/{order_number}?phone=+994502222222",
+            f"/storefront/orders/{order_number}?phone=%2B994502222222",
             headers=shop_headers
         )
         assert track_response.status_code == 200
@@ -304,7 +304,7 @@ class TestCouponLifecycle:
         )
         assert list_response.status_code == 200
         list_data = list_response.json()
-        assert any(c["code"] == "LIFECYCLE25" for c in list_data["coupons"])
+        assert any(c["code"] == "LIFECYCLE25" for c in list_data)
 
         # Step 3: Create product for testing
         product = Product(

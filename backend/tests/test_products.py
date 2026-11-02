@@ -262,7 +262,7 @@ class TestUpdateProduct:
         assert data["inventory_count"] == 75
 
     def test_update_product_slug(self, client: TestClient, auth_headers: dict, test_shop: Shop, test_product: Product):
-        """Test that slug is updated when name changes."""
+        """Test that slug stays the same on rename, so existing links keep working."""
         response = client.put(
             f"/admin/shops/{test_shop.id}/products/{test_product.id}",
             json={"name": "Completely New Name"},
@@ -270,7 +270,7 @@ class TestUpdateProduct:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["slug"] == "completely-new-name"
+        assert data["slug"] == "test-product"
 
 
 class TestDeleteProduct:
@@ -294,7 +294,7 @@ class TestDeleteProduct:
             f"/admin/shops/{test_shop.id}/products/{product.id}",
             headers=auth_headers
         )
-        assert response.status_code == 200
+        assert response.status_code == 204
         
         # Verify product is deleted
         response = client.get(

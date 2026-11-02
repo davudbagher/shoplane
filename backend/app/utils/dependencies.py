@@ -116,22 +116,27 @@ def get_current_shop(
 
 def verify_shop_owner(
     shop_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Shop:
     """
-    Verify that current user owns the shop.
+    Verify that current user owns the shop (platform admins may access any shop).
     Used by ADMIN endpoints.
-    
-    NOTE: Requires get_current_user to be called first in the endpoint!
     """
     shop = db.query(Shop).filter(Shop.id == shop_id).first()
-    
+
     if not shop:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Shop not found"
         )
-    
+
+    if shop.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this shop"
+        )
+
     # Kill Switch for Admin: Block access if expired
     if shop.subscription_status == SubscriptionStatus.EXPIRED:
         raise HTTPException(

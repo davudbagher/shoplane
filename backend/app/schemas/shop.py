@@ -44,7 +44,7 @@ class ShopCreate(ShopBase):
 class MilliKartSettings(BaseModel):
     """Schema for MilliKart payment settings."""
     millikart_enabled: bool = Field(default=False, description="Enable MilliKart payments")
-    millikart_iban: Optional[str] = Field(None, max_length=34, description="Your IBAN for receiving payments (AZ format: AZ2 + 20 digits)")
+    millikart_iban: Optional[str] = Field(None, max_length=34, description="Your IBAN for receiving payments (28 characters, starting with AZ)")
     millikart_account_info: Optional[str] = Field(None, description="MilliKart account details")
     millikart_payment_link: Optional[str] = Field(None, max_length=500, description="Direct payment link for checkout")
 
@@ -54,9 +54,9 @@ class MilliKartSettings(BaseModel):
         """Validate Azerbaijan IBAN format."""
         if v is None:
             return v
-        # Azerbaijan IBAN: AZ + 2 digits + 20 alphanumeric (usually AZ2 + 20 digits)
-        if not re.match(r'^AZ\d{2}[A-Z0-9]{20}$', v.upper()):
-            raise ValueError('Invalid IBAN format. Azerbaijan IBAN should be: AZ2 + 20 digits (e.g., AZ20010000000000000000000000)')
+        # Azerbaijan IBAN: AZ + 2 check digits + 4 letter bank code + 20 alphanumeric
+        if not re.match(r'^AZ\d{2}[A-Z0-9]{24}$', v.upper()):
+            raise ValueError('Invalid IBAN format. Azerbaijan IBAN should be 28 characters (e.g., AZ21NABZ00000000137010001944)')
         return v.upper()
 
     @field_validator('millikart_payment_link')
@@ -83,7 +83,6 @@ class ShopResponse(ShopBase):
     subscription_status: Optional[SubscriptionStatus] = None
     trial_ends_at: Optional[datetime]
     subscription_expires_at: Optional[datetime]
-    setup_token: Optional[str]
     onboarding_completed: bool
     custom_domain: Optional[str]
     allow_cod: bool

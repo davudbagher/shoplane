@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 import secrets
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.models.shop import Shop, SubscriptionPlan, SubscriptionStatus
@@ -175,19 +176,16 @@ def create_shop_from_lead(
     if existing_shop:
         raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' already exists")
 
-    # Generate temporary password
-    temp_password = secrets.token_urlsafe(12)
-
     # Check if user already exists with this email
     user = db.query(User).filter(User.email == (lead.email or f"{subdomain}@1line.az")).first()
 
     if not user:
-        # Create new user (shop owner)
+        # Create new user (shop owner) with a throwaway password - they set their own via the setup link
         user = User(
             email=lead.email or f"{subdomain}@1line.az",
             full_name=lead.full_name,
             phone=lead.phone or lead.whatsapp,
-            hashed_password=get_password_hash(temp_password),
+            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
             is_active=True,
             is_superuser=False
         )
@@ -198,11 +196,10 @@ def create_shop_from_lead(
         user.full_name = lead.full_name
         if lead.phone:
             user.phone = lead.phone
-        # Don't change password for existing users
-        temp_password = None  # No temp password needed
 
     # Generate setup token
     setup_token = secrets.token_urlsafe(32)
+    setup_url = f"{settings.FRONTEND_URL}/setup?token={setup_token}"
     trial_end = datetime.now(timezone.utc) + timedelta(days=14)
 
     # ── Create shop with FULL lead data ──
@@ -255,9 +252,6 @@ def create_shop_from_lead(
     lead.screening_status = "approved"
     lead.notes = f"Shop created by {admin.email} on {datetime.now().strftime('%Y-%m-%d %H:%M')}"
 
-    # Store temporary password in shop for admin reference
-    shop.temporary_password = temp_password
-
     db.commit()
     db.refresh(shop)
 
@@ -267,7 +261,7 @@ def create_shop_from_lead(
             "name": shop.name,
             "subdomain": shop.subdomain,
             "url": f"https://{shop.subdomain}.1line.az",
-            "admin_url": f"http://localhost:5173/admin/dashboard"
+            "admin_url": f"{settings.FRONTEND_URL}/admin/dashboard"
         },
         "owner": {
             "name": user.full_name,
@@ -276,9 +270,8 @@ def create_shop_from_lead(
         },
         "credentials": {
             "email": user.email,
-            "temporary_password": temp_password or "Use your existing password",
             "setup_token": setup_token,
-            "setup_url": f"http://localhost:5173/setup?token={setup_token}"
+            "setup_url": setup_url
         },
         "whatsapp_message": f"""Salam {lead.full_name}! 🎉
 
@@ -287,12 +280,12 @@ Təbriklər! Onlayn mağazanız hazırdır:
 🏪 Mağaza Adı: {shop.name}
 🌐 Sayt: https://{shop.subdomain}.1line.az
 📧 Email: {user.email}
-{f"🔑 Şifrə: {temp_password}" if temp_password else "🔑 Şifrə: Qeydiyyat zamanı təyin etdiyiniz şifrə"}
+🔑 Şifrənizi təyin edin: {setup_url}
 
-İdarəetmə paneli: http://localhost:5173/admin/dashboard
+İdarəetmə paneli: {settings.FRONTEND_URL}/admin/dashboard
 
 Suallarınız olarsa, bizə müraciət edin! 🚀""",
-        "message": f"Shop created successfully! Credentials stored. You can send them via WhatsApp or copy from Kitchen."
+        "message": "Shop created successfully! Send the setup link via WhatsApp or copy it from Kitchen."
     }
 
 
@@ -409,17 +402,17 @@ def get_shop_credentials(
     
     Returns:
     - Owner email
-    - Temporary password (if still stored)
-    - Setup token
+    - Setup link (empty once the merchant has used it)
     - Whether credentials were sent
     """
     shop = db.query(Shop).filter(Shop.id == shop_id).first()
     if not shop:
         raise HTTPException(status_code=404, detail="Shop not found")
-    
+
     # Get owner info
     owner = db.query(User).filter(User.id == shop.owner_id).first()
-    
+    setup_url = f"{settings.FRONTEND_URL}/setup?token={shop.setup_token}" if shop.setup_token else None
+
     return {
         "shop_id": shop.id,
         "shop_name": shop.name,
@@ -431,9 +424,8 @@ def get_shop_credentials(
         },
         "credentials": {
             "email": owner.email,
-            "temporary_password": shop.temporary_password,
             "setup_token": shop.setup_token,
-            "setup_url": f"http://localhost:5173/setup?token={shop.setup_token}"
+            "setup_url": setup_url
         },
         "tracking": {
             "credentials_sent": shop.credentials_sent,
@@ -447,9 +439,9 @@ Təbriklər! Onlayn mağazanız hazırdır:
 🏪 Mağaza Adı: {shop.name}
 🌐 Sayt: https://{shop.subdomain}.1line.az
 📧 Email: {owner.email}
-🔑 Şifrə: {shop.temporary_password or 'Setup token ilə təyin edin'}
+{f"🔑 Şifrənizi təyin edin: {setup_url}" if setup_url else "🔑 Şifrə: Təyin etdiyiniz şifrə ilə daxil olun"}
 
-İdarəetmə paneli: http://localhost:5173/admin/dashboard
+İdarəetmə paneli: {settings.FRONTEND_URL}/admin/dashboard
 
 Suallarınız olarsa, bizə müraciət edin! 🚀"""
     }

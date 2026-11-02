@@ -35,6 +35,15 @@ export const authApi = {
   },
 
   /**
+   * Set password from the single-use link sent to a merchant
+   * POST /auth/setup-password
+   */
+  setupPassword: async (token, password) => {
+    const response = await apiClient.post('/auth/setup-password', { token, password });
+    return response.data;
+  },
+
+  /**
    * Get current user profile
    * GET /auth/me
    */

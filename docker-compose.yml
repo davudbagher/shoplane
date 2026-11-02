@@ -6,7 +6,7 @@ services:
     image: postgres:14-alpine
     environment:
       POSTGRES_USER: shoplane_user
-      POSTGRES_PASSWORD: shoplane_pass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: shoplane_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -23,7 +23,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql://shoplane_user:shoplane_pass@db:5432/shoplane_db
+      - DATABASE_URL=postgresql://shoplane_user:${POSTGRES_PASSWORD}@db:5432/shoplane_db
     env_file:
       - ./backend/.env
     depends_on:

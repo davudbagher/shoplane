@@ -33,7 +33,7 @@ class TestCouponValidation:
         data = response.json()
         assert data["is_valid"] is True
         assert float(data["discount_amount"]) > 0
-        assert "ugur" in data["message"].lower()  # Azerbaijani success message
+        assert "uğur" in data["message"].lower()  # Azerbaijani success message
 
     def test_validate_invalid_coupon_code(self, client: TestClient, test_shop: Shop, shop_headers: dict):
         """Test validating non-existent coupon."""
@@ -144,7 +144,7 @@ class TestCouponValidation:
         data = response.json()
         assert data["is_valid"] is False
 
-    def test_validate_percentage_coupon_calculation(self, client: TestClient, test_shop: Shop, shop_headers: dict):
+    def test_validate_percentage_coupon_calculation(self, client: TestClient, test_shop: Shop, test_coupon: Coupon, shop_headers: dict):
         """Test percentage discount calculation."""
         # 20% off on 100 AZN = 20 AZN discount
         validation_data = {
@@ -327,8 +327,7 @@ class TestAdminCoupons:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "coupons" in data
-        assert len(data["coupons"]) >= 5
+        assert len(data) >= 5
 
     def test_get_coupon_by_id(self, client: TestClient, auth_headers: dict, test_shop: Shop, test_coupon: Coupon):
         """Test getting single coupon."""
@@ -376,7 +375,7 @@ class TestAdminCoupons:
             f"/admin/shops/{test_shop.id}/coupons/{coupon.id}",
             headers=auth_headers
         )
-        assert response.status_code == 200
+        assert response.status_code == 204
         
         # Verify deletion
         response = client.get(
