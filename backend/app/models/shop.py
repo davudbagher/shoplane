@@ -41,6 +41,7 @@ class Shop(Base):
     email = Column(String, nullable=True)
     address = Column(String, nullable=True)
     whatsapp_number = Column(String, nullable=True) # For direct "Kitchen" communication
+    instagram_url = Column(String, nullable=True)  # Instagram profile URL for storefront
     
     # Onboarding
     setup_token = Column(String, unique=True, index=True, nullable=True) # Single-use setup link

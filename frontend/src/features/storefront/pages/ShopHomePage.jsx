@@ -15,7 +15,10 @@ export const ShopHomePage = () => {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [categoryTree, setCategoryTree] = useState(null);
+  const [allNames, setAllNames] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [leafFilter, setLeafFilter] = useState(null); // Names to filter by (from top category bar)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
@@ -24,9 +27,29 @@ export const ShopHomePage = () => {
     try { return JSON.parse(localStorage.getItem('favorites') || '[]'); } catch { return []; }
   });
 
-  // Load categories once
+  // Load flat categories once (for sidebar)
   useEffect(() => {
     storefrontApi.getCategories().then(data => setCategories(data || [])).catch(() => { });
+  }, []);
+
+  // Load hierarchical categories tree
+  useEffect(() => {
+    storefrontApi.getCategoryTree().then(data => {
+      if (data?.categories) {
+        setCategoryTree(data);
+        setAllNames(data.all_names || []);
+      }
+    }).catch(() => { });
+  }, []);
+
+  // Listen for category filter changes from top bar
+  useEffect(() => {
+    const handler = (e) => {
+      const leafNames = e.detail;
+      setLeafFilter(leafNames);
+    };
+    window.addEventListener('categoryFilterChange', handler);
+    return () => window.removeEventListener('categoryFilterChange', handler);
   }, []);
 
   const loadProducts = useCallback(async () => {
@@ -35,21 +58,28 @@ export const ShopHomePage = () => {
       const params = {};
       if (selectedCategory === 'new_arrival') {
         params.is_new_arrival = true;
-      } else if (selectedCategory) {
+      } else if (selectedCategory && !leafFilter) {
         params.category = selectedCategory;
       }
       if (searchQuery) params.search = searchQuery;
       if (sortBy) params.sort_by = sortBy;
 
       const data = await storefrontApi.getProducts(params);
-      setProducts(data.products || []);
-      setTotal(data.total || 0);
+      let filtered = data.products || [];
+
+      // Apply leaf filter if top category bar selected a group
+      if (leafFilter && leafFilter.length > 0) {
+        filtered = filtered.filter(p => leafFilter.includes(p.category));
+      }
+
+      setProducts(filtered);
+      setTotal(filtered.length);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, leafFilter, searchQuery, sortBy]);
 
   // Load products whenever filters change
   useEffect(() => {
@@ -72,8 +102,14 @@ export const ShopHomePage = () => {
     });
   }, []);
 
+  // Determine which categories to show in sidebar
+  // If leafFilter is set, show leaf names + "Hamısı"; otherwise show flat categories
+  const sidebarItems = leafFilter
+    ? [...leafFilter]
+    : categories;
+
   return (
-    <StorefrontLayout onSearch={handleSearch} searchValue={searchQuery}>
+    <StorefrontLayout onSearch={handleSearch} searchValue={searchQuery} categoryTree={categoryTree} allNames={allNames}>
       <div className="max-w-screen-xl mx-auto px-6 py-8 flex gap-8">
 
         {/* ── Left Sidebar ── */}
@@ -84,8 +120,8 @@ export const ShopHomePage = () => {
             <ul className="space-y-1">
               <li>
                 <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${!selectedCategory
+                  onClick={() => { setSelectedCategory(null); setLeafFilter(null); }}
+                  className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${!selectedCategory && !leafFilter
                     ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
                     : 'text-gray-500 hover:text-gray-900 pl-3'
                     }`}
@@ -104,16 +140,16 @@ export const ShopHomePage = () => {
                   Yeni Gələnlər ✨
                 </button>
               </li>
-              {categories.map((cat) => (
-                <li key={cat}>
+              {sidebarItems.map((cat) => (
+                <li key={typeof cat === 'object' ? cat.name : cat}>
                   <button
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${selectedCategory === cat
+                    onClick={() => setSelectedCategory(typeof cat === 'object' ? cat.name : cat)}
+                    className={`w-full text-left text-sm py-1.5 px-0 transition-colors ${selectedCategory === (typeof cat === 'object' ? cat.name : cat)
                       ? 'text-gray-900 font-semibold border-l-2 border-gray-900 pl-3'
                       : 'text-gray-500 hover:text-gray-900 pl-3'
                       }`}
                   >
-                    {cat}
+                    {typeof cat === 'object' ? cat.name : cat}
                   </button>
                 </li>
               ))}
@@ -128,7 +164,9 @@ export const ShopHomePage = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-                {selectedCategory ? `Kateqoriya / ${selectedCategory}` : 'Bütün Məhsullar'}
+                {leafFilter
+                  ? `Kateqoriya / ${leafFilter.join(', ')}`
+                  : selectedCategory ? `Kateqoriya / ${selectedCategory}` : 'Bütün Məhsullar'}
               </p>
               <p className="text-sm text-gray-500">
                 {loading ? '...' : `${total} məhsul`}
@@ -140,21 +178,21 @@ export const ShopHomePage = () => {
               {/* Mobile Category Scroll */}
               <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
                 <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${!selectedCategory
+                  onClick={() => { setSelectedCategory(null); setLeafFilter(null); }}
+                  className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${!selectedCategory && !leafFilter
                     ? 'bg-gray-900 text-white border-gray-900'
                     : 'border-gray-300 text-gray-600 hover:border-gray-600'
                     }`}
                 >Hamısı</button>
-                {categories.map(cat => (
+                {sidebarItems.map(cat => (
                   <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${selectedCategory === cat
+                    key={typeof cat === 'object' ? cat.name : cat}
+                    onClick={() => setSelectedCategory(typeof cat === 'object' ? cat.name : cat)}
+                    className={`flex-shrink-0 px-3 py-1.5 text-xs border rounded-full transition-colors ${selectedCategory === (typeof cat === 'object' ? cat.name : cat)
                       ? 'bg-gray-900 text-white border-gray-900'
                       : 'border-gray-300 text-gray-600 hover:border-gray-600'
                       }`}
-                  >{cat}</button>
+                  >{typeof cat === 'object' ? cat.name : cat}</button>
                 ))}
               </div>
 
@@ -195,13 +233,15 @@ export const ShopHomePage = () => {
               <p className="text-gray-500 text-sm">
                 {searchQuery
                   ? `"${searchQuery}" üçün nəticə yoxdur`
-                  : selectedCategory
-                    ? `"${selectedCategory}" kateqoriyasında məhsul yoxdur`
-                    : 'Hələ məhsul əlavə edilməyib'}
+                  : leafFilter
+                    ? `"${leafFilter.join(', ')}" kateqoriyasında məhsul yoxdur`
+                    : selectedCategory
+                      ? `"${selectedCategory}" kateqoriyasında məhsul yoxdur`
+                      : 'Hələ məhsul əlavə edilməyib'}
               </p>
-              {(searchQuery || selectedCategory) && (
+              {(searchQuery || selectedCategory || leafFilter) && (
                 <button
-                  onClick={() => { setSearchQuery(''); setSelectedCategory(null); }}
+                  onClick={() => { setSearchQuery(''); setSelectedCategory(null); setLeafFilter(null); }}
                   className="mt-4 text-sm underline text-gray-600 hover:text-gray-900"
                 >
                   Filteri sıfırla
@@ -210,15 +250,15 @@ export const ShopHomePage = () => {
             </div>
           )}
 
-          {/* Product Grid */}
+          {/* Product Grid — unchanged animation/style from original */}
           {!loading && products.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
               {products.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  isFavorite={favorites.includes(product.id)} 
-                  onFavoriteToggle={toggleFavorite} 
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFavorite={favorites.includes(product.id)}
+                  onFavoriteToggle={toggleFavorite}
                 />
               ))}
             </div>

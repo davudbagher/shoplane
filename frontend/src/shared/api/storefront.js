@@ -5,24 +5,30 @@ import axios from 'axios';
  * For customer-facing shop pages
  */
 
-// Helper: Get shop subdomain from URL or localStorage
+// Helper: Get shop subdomain from URL or env
 export const getShopSubdomain = () => {
   const hostname = window.location.hostname;
-  
+
   // Production: shop.1line.az
   if (hostname.includes('.1line.az')) {
-    // If it's literally just 'www.1line.az', we treat it as no subdomain
     if (hostname === 'www.1line.az') return null;
     return hostname.split('.1line.az')[0];
   }
-  
-  // Development: localhost or 192.168.x.x
-  if (hostname === 'localhost' || hostname.startsWith('192.168') || hostname.startsWith('127.0.0.1')) {
-    const devSubdomain = localStorage.getItem('dev_shop_subdomain');
-    if (devSubdomain) return devSubdomain;
+
+  // Development: ?shop=subdomain sets and sticks for the session
+  const params = new URLSearchParams(window.location.search);
+  const queryShop = params.get('shop');
+  if (queryShop) {
+    sessionStorage.setItem('dev_shop_subdomain', queryShop);
+    return queryShop;
   }
-  
-  return null;
+
+  // Development: reuse shop set earlier in this session
+  const sessionShop = sessionStorage.getItem('dev_shop_subdomain');
+  if (sessionShop) return sessionShop;
+
+  // Fallback: localStorage (legacy)
+  return localStorage.getItem('dev_shop_subdomain') || null;
 };
 
 // Helper: Get API Base URL dynamically
@@ -90,6 +96,12 @@ export const storefrontApi = {
   /** Get available categories — GET /storefront/categories */
   getCategories: async () => {
     const response = await storefrontClient.get('/storefront/categories');
+    return response.data;
+  },
+
+  /** Get hierarchical categories tree — GET /storefront/categories/tree */
+  getCategoryTree: async () => {
+    const response = await storefrontClient.get('/storefront/categories/tree');
     return response.data;
   },
 

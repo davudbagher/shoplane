@@ -19,6 +19,8 @@ from app.schemas.product import ProductResponse, ProductListResponse
 from app.schemas.order import OrderCreate, OrderResponse
 from app.schemas.customer import CustomerCreate, CustomerResponse
 from app.schemas.coupon import CouponValidateRequest, CouponValidateResponse
+from app.schemas.category import CategoryTreeResponse, CategoryTreeItem, CategorySubcategory
+from app.models.category import Category
 from app.utils.dependencies import get_current_shop
 from app.utils.email import send_order_confirmation_email
 
@@ -167,6 +169,73 @@ def get_categories(
     ).distinct().all()
     
     return [cat[0] for cat in categories if cat[0]]
+
+
+@router.get("/categories/tree", response_model=CategoryTreeResponse)
+def get_categories_tree(
+    shop: Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db)
+):
+    """
+    Get hierarchical category structure for storefront display.
+
+    Returns top-level categories with their children (subcategories).
+    Example:
+    {
+      "categories": [
+        {"id": 1, "name": "Kişilər", "shop_id": 5, "children": [
+          {"id": 2, "name": "Paltarlar"},
+          {"id": 3, "name": "Köynəklər"}
+        ]},
+        {"id": 4, "name": "Qadınlar", "shop_id": 5, "children": [...]}
+      ],
+      "all_names": ["Paltarlar", "Köynəklər", "Şalvar", ...]
+    }
+    """
+    # Get all categories for this shop
+    all_cats = db.query(Category).filter(
+        Category.shop_id == shop.id
+    ).order_by(Category.name).all()
+
+    # Group by parent_id -> build tree
+    children_map: dict[int, list[CategorySubcategory]] = {}
+    top_level: list[CategoryTreeItem] = []
+
+    # First pass: collect subcategories by parent
+    for cat in all_cats:
+        child = CategorySubcategory(id=cat.id, name=cat.name, shop_id=cat.shop_id)
+        if cat.parent_id is not None:
+            children_map.setdefault(cat.parent_id, []).append(child)
+        else:
+            # Top-level: attach its children from the map
+            top_level.append(CategoryTreeItem(
+                id=cat.id,
+                name=cat.name,
+                shop_id=cat.shop_id,
+                children=children_map.get(cat.id, [])
+            ))
+
+    # Build flat list of all leaf names for backward-compat product filtering
+    leaf_names = set()
+    all_ids = {c.id for c in all_cats}
+
+    def collect_leaves(cat_id: int):
+        """Collect leaf category names under a given ID."""
+        children = children_map.get(cat_id, [])
+        has_children = False
+        for ch in children:
+            has_children = True
+            collect_leaves(ch.id)
+        if not has_children:
+            leaf_names.add(next((c.name for c in all_cats if c.id == cat_id), None))
+
+    for item in top_level:
+        collect_leaves(item.id)
+
+    return CategoryTreeResponse(
+        categories=top_level,
+        all_names=list(leaf_names)
+    )
 
 
 def calculate_discount(coupon: Coupon, order_items_data: list, db_products: dict) -> Decimal:

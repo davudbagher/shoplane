@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.shop import Shop, SubscriptionPlan, SubscriptionStatus
 from app.models.lead import Lead, LeadStatus
+from app.models.category import Category
 from app.schemas.shop import ShopResponse, ShopCreate, ShopUpdate
 from app.schemas.user import UserResponse, UserCreate
 from app.schemas.lead import LeadResponse, LeadCreate
@@ -153,38 +154,33 @@ def create_shop_from_lead(
 ):
     """
     Create a shop from an existing lead with all their onboarding data.
-    
+
     This automatically configures:
-    - Shop details (name, subdomain, contact info)
+    - Shop details (name, subdomain, contact info, branding)
     - Payment methods (COD, MilliKart, etc.)
     - Delivery options (courier, pickup, cities)
     - Brand identity (logo, colors)
-    - Business info (tax ID, IBAN if provided)
-    
-    Returns:
-    - Shop details
-    - Login credentials (email, temporary password)
-    - Setup token for password reset
+    - Default product categories based on business type
     """
     # Get lead
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    
+
     # Check if shop already exists
     subdomain = payload.get("subdomain", lead.shop_name.lower().replace(' ', '').replace('ı', 'i').replace('ə', 'e').replace('ö', 'o').replace('ü', 'u').replace('ğ', 'g').replace('ç', 'c').replace('ş', 's') + str(lead.id))
     subdomain = subdomain[:30].strip('-')
-    
+
     existing_shop = db.query(Shop).filter(Shop.subdomain == subdomain).first()
     if existing_shop:
         raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' already exists")
-    
+
     # Generate temporary password
     temp_password = secrets.token_urlsafe(12)
-    
+
     # Check if user already exists with this email
     user = db.query(User).filter(User.email == (lead.email or f"{subdomain}@1line.az")).first()
-    
+
     if not user:
         # Create new user (shop owner)
         user = User(
@@ -204,64 +200,67 @@ def create_shop_from_lead(
             user.phone = lead.phone
         # Don't change password for existing users
         temp_password = None  # No temp password needed
-    
+
     # Generate setup token
     setup_token = secrets.token_urlsafe(32)
     trial_end = datetime.now(timezone.utc) + timedelta(days=14)
-    
-    # Create shop with lead data
+
+    # ── Create shop with FULL lead data ──
     shop = Shop(
-        # Basic Info
+        # Basic Info (from Step 2)
         name=lead.shop_name or "My Shop",
         subdomain=subdomain,
         slug=subdomain,
         description=lead.business_description,
         logo_url=lead.logo_url,
         banner_url=lead.banner_url,
-        primary_color=lead.primary_color or "#0ea5e9",
-        
+        primary_color=lead.primary_color or "#6366f1",
+
         # Contact Info
         phone=lead.phone or lead.whatsapp,
         email=lead.email,
         address=lead.location_address,
         whatsapp_number=lead.whatsapp,
-        
+        instagram_url=lead.instagram_url,
+
         # Subscription
         owner_id=user.id,
         plan_type=SubscriptionPlan.PRO,  # Start with PRO trial
         subscription_status=SubscriptionStatus.TRIAL,
         trial_ends_at=trial_end,
         subscription_expires_at=trial_end,
-        
+
         # Setup
         setup_token=setup_token,
         onboarding_completed=True,  # Pre-configured from lead data
         is_active=True,
-        
+
         # Payment Methods (from lead preferences)
-        allow_cod=lead.want_cod if hasattr(lead, 'want_cod') else True,
-        allow_online_payment=(lead.want_millikart or lead.want_birbank or lead.want_pasha_pay) if hasattr(lead, 'want_millikart') else False,
-        
+        allow_cod=getattr(lead, 'want_cod', True),
+        allow_online_payment=(getattr(lead, 'want_millikart', False) or getattr(lead, 'want_birbank', False) or getattr(lead, 'want_pasha_pay', False)),
+
         # MilliKart (if they want it and provided IBAN)
-        millikart_enabled=lead.want_millikart if hasattr(lead, 'want_millikart') else False,
-        millikart_iban=lead.iban if hasattr(lead, 'iban') else None,
+        millikart_enabled=getattr(lead, 'want_millikart', False),
+        millikart_iban=getattr(lead, 'iban', None),
     )
-    
+
     db.add(shop)
     db.flush()
-    
+
+    # ── Auto-generate default categories based on business type ──
+    _generate_default_categories(db, shop, lead.category)
+
     # Update lead status
     lead.status = LeadStatus.ONBOARDED
     lead.screening_status = "approved"
     lead.notes = f"Shop created by {admin.email} on {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    
+
     # Store temporary password in shop for admin reference
     shop.temporary_password = temp_password
-    
+
     db.commit()
     db.refresh(shop)
-    
-    # Return shop details with credentials
+
     return {
         "shop": {
             "id": shop.id,
@@ -295,6 +294,70 @@ Təbriklər! Onlayn mağazanız hazırdır:
 Suallarınız olarsa, bizə müraciət edin! 🚀""",
         "message": f"Shop created successfully! Credentials stored. You can send them via WhatsApp or copy from Kitchen."
     }
+
+
+def _generate_default_categories(db: Session, shop: Shop, category_slug: Optional[str]) -> None:
+    """
+    Generate default hierarchical categories based on the lead's business category.
+    Creates parent → children pairs so the storefront has a proper category tree.
+    """
+    if not category_slug:
+        return
+
+    CATEGORIES_MAP = {
+        "clothing": [
+            ("Kişilər", ["Paltarlar", "Köynəklər", "Şalvar", "Aksessuarlar"]),
+            ("Qadınlar", ["Paltarlar", "Köynəklər", "Şalvarlar", "Aksessuarlar"]),
+            ("Uşaq", ["Oğlan", "Qız", "Komplektlər"]),
+        ],
+        "electronics": [
+            ("Telefonlar", ["Apple", "Samsung", "Xiaomi"]),
+            ("Noutbuklar", ["Apple", "HP", "Lenovo", "Asus"]),
+            ("Aksessuarlar", ["Çanta", "Kabel", "Qurğu", "Qoruyucu"]),
+        ],
+        "home": [
+            ("Ev Dekoru", ["Divar", "İşıqlandırma", "Bəzək"]),
+            ("Bağ", ["Bitki qabları", "Alətlər", "Torpaq"]),
+            ("Mebel", ["Oturaq", "Masalar", "Dolablar"]),
+        ],
+        "beauty": [
+            ("Saç Baxımı", ["Şampun", "Maska", "Yağ"]),
+            ("Üz Baxımı", ["Krem", "Serum", "Tonik"]),
+            ("Makiyaj", ["Ruj", "Fond", "Maskarа"]),
+        ],
+        "food": [
+            ("Əsas Yeməklər", ["Quru", "Maye"]),
+            ("Şirniyyatlar", ["Konfet", "Keyk", "Peçenye"]),
+            ("İçkilər", ["Soyuq", "İsti"]),
+        ],
+        "sports": [
+            ("Geyim", ["Personal", "Fitness", "Koşu"]),
+            ("Avadanlıq", ["Gümüşlər", "Yoga", "Koşu"]),
+            ("Əlavələr", ["Protein", "Vitaminlər"]),
+        ],
+        "toys": [
+            ("Oyuncaqlar", ["Maşın", "Balaca", "Papaq"]),
+            ("Təhsil", ["Blocks", "Puzzle", "Kitab"]),
+            ("Bebekek", ["Bebekek", "Giydir", "Yatma"]),
+        ],
+        "pet": [
+            ("Heyvan Yemi", ["It", "Pişik", "Quş"]),
+            ("Aksessuarlar", ["Yataq", "Yol", "Oynaq"]),
+        ],
+        "other": [],  # Empty — shop will add their own
+    }
+
+    items = CATEGORIES_MAP.get(category_slug, [])
+    for parent_name, children_names in items:
+        # Create top-level category
+        parent_cat = Category(name=parent_name, shop_id=shop.id, parent_id=None)
+        db.add(parent_cat)
+        db.flush()
+
+        # Create child categories under it
+        for child_name in children_names:
+            child_cat = Category(name=child_name, shop_id=shop.id, parent_id=parent_cat.id)
+            db.add(child_cat)
 
 
 @router.put("/shops/{shop_id}/edit", response_model=ShopResponse)

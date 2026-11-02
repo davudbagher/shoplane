@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Header, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional
 from jose import JWTError, jwt
 import logging
@@ -87,7 +88,7 @@ def get_current_shop(
     
     # Query database for shop
     # We include inactive/expired shops here so the storefront can render the "pressure" overlay
-    shop = db.query(Shop).filter(Shop.subdomain == subdomain).first()
+    shop = db.query(Shop).filter(func.lower(Shop.subdomain) == subdomain.lower()).first()
     
     if not shop:
         logger.warning("Shop not found in database: %s", subdomain)

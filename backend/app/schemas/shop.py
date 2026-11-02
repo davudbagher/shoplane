@@ -141,3 +141,5 @@ class ShopPublicResponse(BaseModel):
     allow_online_payment: bool
     # Public payment info
     millikart_enabled: bool
+    # Social & branding extras
+    instagram_url: Optional[str] = None
